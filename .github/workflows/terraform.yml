@@ -4,7 +4,6 @@ on:
   push:
     branches: ["main"]
     paths: ["src/terraform/**"]
-  pull_request:
 
 jobs:
   terraform:
