@@ -22,9 +22,9 @@ jobs:
       # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        
-      # scanner de segurança estática para Infraestrutura como Código   
-      - name:  Checkov Security Scan
+
+      # scanner de segurança estática para Infraestrutura como Código
+      - name: Checkov Security Scan
         uses: bridgecrewio/checkov-action@v12.1347.0
         with:
           # do not return an error code if there are failed checks
@@ -32,16 +32,16 @@ jobs:
           # run only on a specific infrastructure
           framework: terraform
 
-      # 
+      #
       - name: TFLint
         uses: pauloconnor/tflint-action@v0.0.2
         with:
-        # The path to run TFLint against, including /github/workspace
+          # The path to run TFLint against, including /github/workspace
           tflint_path: /src/terraform/** # optional, default is /github/workspace
-        # Whether or not to recurse through directories
+          # Whether or not to recurse through directories
           tflint_recurse: false # optional, default is false
-        
-      # configura credencial aws  
+
+      # configura credencial aws
       - name: configura aws credencial
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -55,7 +55,6 @@ jobs:
         working-directory: ./src/terraform
         run: |
           terraform init \
-          # configurando bakcend por variaveis
           -backend-config="bucket=${{vars.BUCKET}}" \
           -backend-config="key=${{vars.KEY}}" \
           -backend-config="region=${{vars.REGION}}"
@@ -75,7 +74,7 @@ jobs:
           echo "$tfvars" > terraform.tfvars
           terraform plan -var-file="terraform.tfvars" -input=false
 
-       # On push to "main", build or change infrastructure according to Terraform configuration files
+        # On push to "main", build or change infrastructure according to Terraform configuration files
       - name: Terraform Apply
         working-directory: ./src/terraform
         env:
