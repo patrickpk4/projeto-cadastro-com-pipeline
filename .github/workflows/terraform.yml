@@ -27,6 +27,7 @@ jobs:
       - name: Checkov Security Scan
         uses: bridgecrewio/checkov-action@v12.1347.0
         with:
+          directory: /src/terraform/**
           # do not return an error code if there are failed checks
           soft_fail: false
           # run only on a specific infrastructure
