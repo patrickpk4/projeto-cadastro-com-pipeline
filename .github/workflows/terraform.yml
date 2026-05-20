@@ -32,6 +32,7 @@ jobs:
 
       # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
       - name: Terraform Init
+        working-directory: ./src/terraform
         run: |
           terraform init \
           -backend-config="bucket=${{vars.BUCKET}}" \
@@ -40,10 +41,12 @@ jobs:
 
       # Checks that all Terraform configuration files adhere to a canonical format
       - name: Terraform Format
+        working-directory: ./src/terraform
         run: terraform fmt -check
 
       # Generates an execution plan for Terraform
       - name: Terraform Plan
+        working-directory: ./src/terraform
         run: terraform plan #-input=false
 
         # On push to "main", build or change infrastructure according to Terraform configuration files
