@@ -19,7 +19,15 @@ jobs:
       # Checkout the repository to the GitHub Actions runner
       - name: Checkout
         uses: actions/checkout@v4
-
+      - name: configura aws credencial   
+        uses: aws-actions/configure-aws-credentials@v6.1.1
+        with:
+          
+          # AWS Region, e.g. us-east-2
+          aws-region: ${{vars.REGION}} 
+          # The Amazon Resource Name (ARN) of the role to assume. Use the provided credentials to assume an IAM role and configure the Actions environment with the assumed role credentials rather than with the provided credentials.
+          role-to-assume: ${{vars.AWS_ROLE}}
+          
       # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
