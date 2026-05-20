@@ -51,7 +51,7 @@ jobs:
           tfvars: ${{secrets.TFVARS}}
 
         run: |
-          echo $tfvars > terraform.tfvars
+          echo "$tfvars" > terraform.tfvars
           terraform plan -var-file="terraform.tfvars" -input=false
 
         # On push to "main", build or change infrastructure according to Terraform configuration files
@@ -61,5 +61,5 @@ jobs:
           tfvars: ${{secrets.TFVARS}}
 
         run: |
-          echo $tfvars > terraform.tfvars
+          echo "$tfvars" > terraform.tfvars
           terraform apply -var-file="terraform.tfvars" -auto-approve -input=false
