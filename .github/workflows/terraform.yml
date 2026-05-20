@@ -3,7 +3,7 @@ name: "Terraform"
 on:
   push:
     branches: ["main"]
-    paths: ["./src/terraform/*"]
+    paths: ["src/terraform/**"]
   pull_request:
 
 jobs:
@@ -19,25 +19,25 @@ jobs:
       # Checkout the repository to the GitHub Actions runner
       - name: Checkout
         uses: actions/checkout@v4
-      - name: configura aws credencial   
-        uses: aws-actions/configure-aws-credentials@v6.1.1
+      - name: configura aws credencial
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          
           # AWS Region, e.g. us-east-2
-          aws-region: ${{vars.REGION}} 
+          aws-region: ${{vars.REGION}}
           # The Amazon Resource Name (ARN) of the role to assume. Use the provided credentials to assume an IAM role and configure the Actions environment with the assumed role credentials rather than with the provided credentials.
           role-to-assume: ${{vars.AWS_ROLE}}
-          
+
       # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v1
+        uses: hashicorp/setup-terraform@v3
 
       # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
       - name: Terraform Init
-        run: terraform init \
-             -backend-config="bucket=${{vars.BUCKET}}" \
-             -backend-config="key=${{vars.KEY}}" \
-             -backend-config="region= ${{vars.REGION}}"
+        run: |
+          terraform init \
+          -backend-config="bucket=${{vars.BUCKET}}" \
+          -backend-config="key=${{vars.KEY}}" \
+          -backend-config="region= ${{vars.REGION}}"
 
       # Checks that all Terraform configuration files adhere to a canonical format
       - name: Terraform Format
