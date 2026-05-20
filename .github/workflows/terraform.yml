@@ -37,7 +37,7 @@ jobs:
           terraform init \
           -backend-config="bucket=${{vars.BUCKET}}" \
           -backend-config="key=${{vars.KEY}}" \
-          -backend-config="region= ${{vars.REGION}}"
+          -backend-config="region=${{vars.REGION}}"
 
       # Checks that all Terraform configuration files adhere to a canonical format
       - name: Terraform Format
