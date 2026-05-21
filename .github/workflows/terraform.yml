@@ -21,7 +21,7 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────────────────────
-  # ETAPA 1 — Definir ambiente
+  # ETAPA 1 — Definir ambiente (staging ou production) a partir do trigger
   # ─────────────────────────────────────────────────────────────────
   set-environment:
     name: Definir Ambiente
