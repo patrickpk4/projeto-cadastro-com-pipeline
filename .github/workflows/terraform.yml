@@ -53,7 +53,7 @@ jobs:
             # PR na main → valida contra configuração de staging
 
           else
-            echo "❌ Trigger não mapeado"
+            echo "Trigger não mapeado"
             exit 1
           fi
 
@@ -296,7 +296,7 @@ jobs:
 
       - name: Resumo
         run: |
-          echo "### ✅ Staging aplicado com sucesso" >> $GITHUB_STEP_SUMMARY
+          echo "###  Staging aplicado com sucesso" >> $GITHUB_STEP_SUMMARY
           echo "- **Tag:** ${{ github.ref_name }}"   >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}"     >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -356,5 +356,5 @@ jobs:
 
       - name: Resumo
         run: |
-          echo "### ✅ Production aplicado com sucesso" >> $GITHUB_STEP_SUMMARY
+          echo "###  Production aplicado com sucesso" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}"        >> $GITHUB_STEP_SUMMARY

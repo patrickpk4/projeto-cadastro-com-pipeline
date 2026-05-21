@@ -55,7 +55,3 @@ variable "instance_types" {
   type        = set(string)
 }
 
-variable "nome" {
-  description = "nome"
-  type = string
-}
