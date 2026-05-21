@@ -54,3 +54,8 @@ variable "instance_types" {
   description = "tipo de instancia "
   type        = set(string)
 }
+
+variable "nome" {
+  description = "nome"
+  type = string
+}
