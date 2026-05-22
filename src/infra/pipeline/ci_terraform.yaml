@@ -17,7 +17,43 @@ on:
 
 jobs:
   # ─────────────────────────────────────────────────────────────────
-  # ETAPA 1 — Testes estáticos
+  # ETAPA 1 — Definir ambiente
+  # ─────────────────────────────────────────────────────────────────
+  set-environment:
+    name: Definir Ambiente
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set-env.outputs.ENV }}
+      is_deploy: ${{ steps.set-env.outputs.IS_DEPLOY }}
+
+    steps:
+      - name: Resolver ambiente pelo trigger
+        id: set-env
+        run: |
+          REF="${{ github.ref }}"
+          EVENT="${{ github.event_name }}"
+
+          if [[ "$REF" == refs/tags/* ]]; then
+            # tag → começa pelo staging, prod vem depois em job separado
+            echo "ENV=staging"    >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=true" >> $GITHUB_OUTPUT
+
+          elif [[ "$REF" == refs/heads/staging ]]; then
+            echo "ENV=staging"     >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
+            # push sem tag → só testes, sem apply
+
+          elif [[ "$EVENT" == "pull_request" ]]; then
+            echo "ENV=staging"     >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
+            # PR na main → valida contra configuração de staging
+
+          else
+            echo " Trigger não mapeado"
+            exit 1
+          fi
+  # ─────────────────────────────────────────────────────────────────
+  # ETAPA 2 — Testes estáticos
   # Roda sempre: PR, push staging, tag
   # ─────────────────────────────────────────────────────────────────
   validate:
@@ -125,7 +161,7 @@ jobs:
         # mostra diff de custo: quanto vai aumentar/diminuir
 
   # ─────────────────────────────────────────────────────────────────
-  # ETAPA 2 — Plan Staging
+  # ETAPA 3 — Plan Staging
   # Roda em: PR na main, push staging, tag v*
   # ─────────────────────────────────────────────────────────────────
   plan-staging:
@@ -198,7 +234,7 @@ jobs:
             });
 
   # ─────────────────────────────────────────────────────────────────
-  # ETAPA 3 — Plan Production
+  # ETAPA 4 — Plan Production
   # Roda somente no merge staging → main
   # ─────────────────────────────────────────────────────────────────
   plan-production:
@@ -256,7 +292,7 @@ jobs:
           retention-days: 1
 
   # ─────────────────────────────────────────────────────────────────
-  # ETAPA 4 — Apply Staging
+  # ETAPA 5 — Apply Staging
   # Roda somente com tag v*
   # ─────────────────────────────────────────────────────────────────
   apply-staging:
@@ -313,7 +349,7 @@ jobs:
           echo "Abra o PR \`staging → main\` para promover para produção."   >> $GITHUB_STEP_SUMMARY
 
   # ─────────────────────────────────────────────────────────────────
-  # ETAPA 5 — Apply Production
+  # ETAPA 6 — Apply Production
   # Roda somente após merge staging → main
   # Protegido por aprovação manual no GitHub varsironment
   # ─────────────────────────────────────────────────────────────────
@@ -366,5 +402,5 @@ jobs:
 
       - name: Resumo
         run: |
-          echo "### ✅ Production aplicado com sucesso" >> $GITHUB_STEP_SUMMARY
+          echo "###  Production aplicado com sucesso" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}"        >> $GITHUB_STEP_SUMMARY
