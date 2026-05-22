@@ -3,7 +3,7 @@ name: Terraform CI/CD
 on:
   pull_request:
     branches: [main]
-    paths: ["src/terraform/**.tf"]
+    paths: ["src/infra/**.tf"]
     # PR na main → só testes, sem apply
 
   push:
@@ -11,7 +11,7 @@ on:
       - staging
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
-    paths: ["src/terraform/**.tf"]
+    paths: ["src/infra/**.tf"]
     # push staging sem tag → só testes
     # tag v* → apply staging, depois prod aguarda aprovação
 
@@ -58,6 +58,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────
   validate:
     name: Testes Estáticos
+    needs: set-environment
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -167,7 +168,7 @@ jobs:
   plan-staging:
     name: Terraform Plan (staging)
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [set-environment, validate]
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'push' && (
