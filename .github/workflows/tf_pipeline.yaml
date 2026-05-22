@@ -99,7 +99,7 @@ jobs:
           tflint_version: latest
 
       - name: TFLint
-        working-directory: ${{ vars.TF_DIR }}
+        working-directory: ${{ vars.TF_DIR_LINT }}
         run: |
           tflint --init
           tflint --recursive
