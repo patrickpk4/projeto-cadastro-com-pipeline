@@ -65,5 +65,5 @@ module "eks" {
     }
   }
 
-  tags = var.project_tags 
+  tags = var.project_tags
 } 
