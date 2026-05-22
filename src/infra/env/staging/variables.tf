@@ -38,20 +38,20 @@ variable "project_tags" {
 
 }
 
-variable "kube_version" {
-  description = "versao do kubernetes"
-  type        = string
+#variable "kube_version" {
+#  description = "versao do kubernetes"
+#  type        = string
+#
+#}
 
-}
+#variable "kube_name" {
+#  description = "nome do cluster kuberntes"
+#  type        = string
+#
+#}
 
-variable "kube_name" {
-  description = "nome do cluster kuberntes"
-  type        = string
-
-}
-
-variable "instance_types" {
-  description = "tipo de instancia "
-  type        = set(string)
-}
+#variable "instance_types" {
+#  description = "tipo de instancia "
+#  type        = set(string)
+#}
 
