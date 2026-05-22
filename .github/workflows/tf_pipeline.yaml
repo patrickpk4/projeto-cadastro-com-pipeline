@@ -19,39 +19,39 @@ jobs:
   # ─────────────────────────────────────────────────────────────────
   # ETAPA 1 — Definir ambiente
   # ─────────────────────────────────────────────────────────────────
-  #set-environment:
-  #  name: Definir Ambiente
-  #  runs-on: ubuntu-latest
-  #  outputs:
-  #    env_name: ${{ steps.set-env.outputs.ENV }}
-  #    is_deploy: ${{ steps.set-env.outputs.IS_DEPLOY }}
-  #
-  #  steps:
-  #    - name: Resolver ambiente pelo trigger
-  #      id: set-env
-  #      run: |
-  #        REF="${{ github.ref }}"
-  #        EVENT="${{ github.event_name }}"
-  #
-  #        if [[ "$REF" == refs/tags/* ]]; then
-  #          # tag → começa pelo staging, prod vem depois em job separado
-  #          echo "ENV=staging"    >> $GITHUB_OUTPUT
-  #          echo "IS_DEPLOY=true" >> $GITHUB_OUTPUT
-  #
-  #        elif [[ "$REF" == refs/heads/staging ]]; then
-  #          echo "ENV=staging"     >> $GITHUB_OUTPUT
-  #          echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
-  #          # push sem tag → só testes, sem apply
-  #
-  #        elif [[ "$EVENT" == "pull_request" ]]; then
-  #          echo "ENV=staging"     >> $GITHUB_OUTPUT
-  #          echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
-  #          # PR na main → valida contra configuração de staging
-  #
-  #        else
-  #          echo " Trigger não mapeado"
-  #          exit 1
-  #        fi
+  set-environment:
+    name: Definir Ambiente
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set-env.outputs.ENV }}
+      is_deploy: ${{ steps.set-env.outputs.IS_DEPLOY }}
+
+    steps:
+      - name: Resolver ambiente pelo trigger
+        id: set-env
+        run: |
+          REF="${{ github.ref }}"
+          EVENT="${{ github.event_name }}"
+
+          if [[ "$REF" == refs/tags/* ]]; then
+            # tag → começa pelo staging, prod vem depois em job separado
+            echo "ENV=staging"    >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=true" >> $GITHUB_OUTPUT
+
+          elif [[ "$REF" == refs/heads/staging ]]; then
+            echo "ENV=staging"     >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
+            # push sem tag → só testes, sem apply
+
+          elif [[ "$EVENT" == "pull_request" ]]; then
+            echo "ENV=staging"     >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
+            # PR na main → valida contra configuração de staging
+
+          else
+            echo " Trigger não mapeado"
+            exit 1
+          fi
   # ─────────────────────────────────────────────────────────────────
   # ETAPA 2 — Testes estáticos
   # Roda sempre: PR, push staging, tag
