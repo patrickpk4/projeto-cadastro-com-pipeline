@@ -200,7 +200,7 @@ jobs:
         working-directory: ${{ vars.TF_DIR }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ vars.BACKEND }}" \
+            -backend-config="bucket=${{ vars.BUCKET }}" \
             -backend-config="key=${{ vars.KEY }}" \
             -backend-config="region=${{ vars.REGION }}"
 
@@ -269,8 +269,8 @@ jobs:
         working-directory: ${{ vars.TF_DIR }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ vars.BACKEND_PROD }}" \
-            -backend-config="key=${{ vars.KEY_PROD }}" \
+            -backend-config="bucket=${{ vars.BUCKET }}" \
+            -backend-config="key=${{ vars.KEY }}" \
             -backend-config="region=${{ vars.REGION }}"
 
       - name: Terraform Plan
@@ -328,7 +328,7 @@ jobs:
         working-directory: ${{ vars.TF_DIR }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ vars.BACKEND }}" \
+            -backend-config="bucket=${{ vars.BUCKET }}" \
             -backend-config="key=${{ vars.KEY }}" \
             -backend-config="region=${{ vars.REGION }}"
 
@@ -388,7 +388,7 @@ jobs:
         working-directory: ${{ vars.TF_DIR }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ vars.BACKEND_PROD }}" \
+            -backend-config="bucket=${{ vars.BUCKET_PROD }}" \
             -backend-config="key=${{ vars.KEY_PROD }}" \
             -backend-config="region=${{ vars.REGION }}"
 
