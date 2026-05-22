@@ -98,19 +98,13 @@ jobs:
         with:
           tflint_version: latest
 
-      - name: TFLint Ambiente
+      - name: TFLint
+        working-directory: ${{ vars.TF_DIR }}
         run: |
-          ENV="${{ needs.set-environment.outputs.env_name }}"
-          tflint --init --chdir=src/infra/env/$ENV
-          tflint --chdir=src/infra/env/$ENV
-        # valida o ambiente resolvido: staging ou production
-
-      - name: TFLint Módulos
-        run: |
-          tflint --init --chdir=src/infra/modules
-          tflint --recursive --chdir=src/infra/modules
-        # --recursive aqui faz sentido pois módulos têm subpastas
-        # valida todos os módulos independente do ambiente
+          tflint --init
+          tflint --recursive
+        # detecta: tipo de instância inválido, variáveis não usadas,
+        # argumentos deprecados, regras do provider AWS
 
       # ── 4. Scan de segurança — tfsec ──────────────────────────
       - name: tfsec
