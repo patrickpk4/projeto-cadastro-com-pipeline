@@ -46,7 +46,6 @@ module "eks" {
 
   # Optional
   endpoint_public_access  = true
-  endpoint_private_access = true
 
 
   # Optional: Adds the current caller identity as an administrator via cluster access entry
