@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - staging
+      - main
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
     paths: ["src/infra/**.tf"]
