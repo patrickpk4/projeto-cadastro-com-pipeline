@@ -43,14 +43,13 @@ variable "kube_version" {
   type        = string
 
 }
-
 variable "kube_name" {
   description = "nome do cluster kuberntes"
   type        = string
 
 }
-
 variable "instance_types" {
   description = "tipo de instancia "
   type        = set(string)
 }
+
