@@ -12,7 +12,7 @@ on:
       - main
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
-    paths: ["src/infra/**.tf"]
+    paths-ignore: ["src/infra/**.md", "src/**.yaml"]
     # push staging sem tag → só testes
     # tag v* → apply staging, depois prod aguarda aprovação
 
@@ -246,8 +246,7 @@ jobs:
     needs: validate
     if: |
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' ||
-      startsWith(github.ref, 'refs/tags/v'))
+      github.ref == 'refs/heads/main'
     permissions:
       id-token: write
       contents: read
@@ -371,8 +370,7 @@ jobs:
     needs: plan-production
     if: |
       github.event_name == 'push' &&
-      ( github.ref == 'refs/heads/main' ||
-      startsWith(github.ref, 'refs/tags/v'))
+      github.ref == 'refs/heads/main'
     environment: production
     # Settings → environments → production → Required reviewers
     # pipeline pausa aqui até aprovação manual
