@@ -44,6 +44,11 @@ jobs:
             echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
             # push sem tag → só testes, sem apply
 
+          elif [[ "$REF" == refs/heads/main ]]; then
+            echo "ENV=production"   >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=true"  >> $GITHUB_OUTPUT
+            # merge na main → production  
+
           elif [[ "$EVENT" == "pull_request" ]]; then
             echo "ENV=staging"     >> $GITHUB_OUTPUT
             echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
