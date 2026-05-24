@@ -12,7 +12,7 @@ on:
       - main
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
-    paths: ["src/infra/**.tf"]
+    paths-ignore: ["src/infra/**.md", "src/**.yaml"]
     # push staging sem tag → só testes
     # tag v* → apply staging, depois prod aguarda aprovação
 
