@@ -1,0 +1,66 @@
+name: Terraform Apply (staging)
+
+on:
+  workflow_call:
+    secrets:
+      GITHUB_TOKEN:
+        required: false
+
+# ─────────────────────────────────────────────────────────────────
+# Apply Staging
+# Roda somente com tag v*
+# Consome o tfplan salvo pelo plan-staging
+# ─────────────────────────────────────────────────────────────────
+
+jobs:
+  apply:
+    name: Apply
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ vars.TF_VERSION }}
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE }}
+
+      - name: Terraform Init
+        working-directory: ${{ vars.TF_DIR }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.BUCKET }}" \
+            -backend-config="key=${{ vars.KEY }}" \
+            -backend-config="region=${{ vars.REGION }}"
+
+      - name: Baixar tfplan staging
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-staging
+          path: ${{ vars.TF_DIR }}
+
+      - name: Terraform Apply
+        working-directory: ${{ vars.TF_DIR }}
+        run: terraform apply -auto-approve -input=false tfplan
+
+      - name: Resumo
+        run: |
+          echo "### Staging aplicado com sucesso"                        >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** ${{ github.ref_name }}"                          >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}"                            >> $GITHUB_STEP_SUMMARY
+          echo ""                                                            >> $GITHUB_STEP_SUMMARY
+          echo "Abra o PR \`staging → main\` para promover para produção."  >> $GITHUB_STEP_SUMMARY

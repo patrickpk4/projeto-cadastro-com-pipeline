@@ -1,0 +1,230 @@
+name: .NET API - CI/CD
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  IMAGE_NAME: your-api
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  # ─────────────────────────────────────────
+  # 1. BUILD + SONARCLOUD + TESTES
+  # ─────────────────────────────────────────
+  build-and-test:
+    name: Build, Analyze & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # SonarCloud precisa do histórico completo
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # ── SonarCloud Setup ──────────────────
+      - name: Install SonarCloud scanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: SonarCloud - Begin analysis
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${{ secrets.SONAR_PROJECT_KEY }}" \
+            /o:"${{ secrets.SONAR_ORG }}" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.exclusions="**/Migrations/**,**/wwwroot/**"
+
+      # ── Build ─────────────────────────────
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      # ── Unit Tests ────────────────────────
+      - name: Unit Tests
+        run: |
+          dotnet test tests/UnitTests/PedeLogo.Catalogo.UnitTests.csproj \
+            --no-build \
+            --configuration Release \
+            --filter "Category=Unit" \
+            --logger "trx;LogFileName=unit-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      # ── Integration Tests ─────────────────
+      - name: Integration Tests
+        run: |
+          dotnet test tests/IntegrationTests/PedeLogo.Catalogo.IntegrationTests.csproj \
+            --no-build \
+            --configuration Release \
+            --filter "Category=Integration" \
+            --logger "trx;LogFileName=integration-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      # ── Smoke Tests (pré-deploy) ──────────
+      - name: Smoke Tests (build)
+        run: |
+          dotnet test tests/IntegrationTests/PedeLogo.Catalogo.IntegrationTests.csproj \
+            --no-build \
+            --configuration Release \
+            --filter "Category=Smoke" \
+            --logger "trx;LogFileName=smoke-results.trx"
+
+      # ── SonarCloud End (publica resultados) ─
+      - name: SonarCloud - End analysis
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Publicar relatório de testes ──────
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results
+          path: '**/*.trx'
+          reporter: dotnet-trx
+
+  # ─────────────────────────────────────────
+  # 2. BUILD & PUSH DOCKER IMAGE
+  # ─────────────────────────────────────────
+  docker-build:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set short SHA
+        id: vars
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # ─────────────────────────────────────────
+  # 3. DEPLOY → DEV
+  # ─────────────────────────────────────────
+  deploy-dev:
+    name: Deploy → Dev
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/dev'
+    environment: dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Set kubeconfig (Dev)
+        run: |
+          echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > kubeconfig.yaml
+          echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> $GITHUB_ENV
+
+      - name: Update image in deployment
+        run: |
+          kubectl set image deployment/${{ env.IMAGE_NAME }} \
+            api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.docker-build.outputs.short_sha }} \
+            -n dev
+
+      - name: Wait for rollout
+        run: kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n dev --timeout=120s
+
+      # ── Smoke Tests pós-deploy ────────────
+      - name: Smoke Tests
+        run: |
+          API_URL="${{ secrets.API_URL_DEV }}"
+          echo "Testando health check..."
+          curl --fail --retry 5 --retry-delay 5 "$API_URL/health"
+          echo "Testando readiness..."
+          curl --fail "$API_URL/health/ready"
+
+  # ─────────────────────────────────────────
+  # 4. DEPLOY → PROD
+  # ─────────────────────────────────────────
+  deploy-prod:
+    name: Deploy → Prod
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    environment: prod  # requer aprovação manual no GitHub Environments
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Set kubeconfig (Prod)
+        run: |
+          echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > kubeconfig.yaml
+          echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> $GITHUB_ENV
+
+      - name: Update image in deployment
+        run: |
+          kubectl set image deployment/${{ env.IMAGE_NAME }} \
+            api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.docker-build.outputs.short_sha }} \
+            -n prod
+
+      - name: Wait for rollout
+        run: kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n prod --timeout=180s
+
+      # ── Smoke Tests pós-deploy ────────────
+      - name: Smoke Tests
+        run: |
+          API_URL="${{ secrets.API_URL_PROD }}"
+          echo "Testando health check..."
+          curl --fail --retry 5 --retry-delay 10 "$API_URL/health"
+          echo "Testando readiness..."
+          curl --fail "$API_URL/health/ready"
