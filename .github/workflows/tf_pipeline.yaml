@@ -11,7 +11,8 @@ on:
       - main
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
-    paths-ignore: ["infra/**.md", "src/**", "*.yaml"]
+    paths-ignore:
+      ["./**/infra/**.md", "./**/src/**", "./.github/workflows/*.yaml"]
 
 permissions:
   contents: read
