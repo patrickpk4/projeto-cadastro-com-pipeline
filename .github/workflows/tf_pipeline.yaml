@@ -52,7 +52,6 @@ jobs:
           elif [[ "$EVENT" == "pull_request" ]]; then
             echo "ENV=staging"     >> $GITHUB_OUTPUT
             echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
-            # PR na main → valida contra configuração de staging
 
           else
             echo " Trigger não mapeado"
