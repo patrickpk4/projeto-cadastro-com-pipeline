@@ -3,8 +3,7 @@ name: Terraform CI/CD
 on:
   pull_request:
     branches: [main]
-    paths: ["src/infra/**.tf"]
-    # PR na main → só testes, sem apply
+    paths: ["**/infra/production**.tf"]
 
   push:
     branches:
@@ -12,14 +11,21 @@ on:
       - main
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
-    paths-ignore: ["src/infra/**.md", "src/**.yaml"]
-    # push staging sem tag → só testes
-    # tag v* → apply staging, depois prod aguarda aprovação
+    paths-ignore: ["infra/**.md", "src/**", "*.yaml"]
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+  id-token: write
+
+# ─────────────────────────────────────────────────────────────────
+# ORQUESTRADOR — apenas define ambiente e encadeia os módulos
+# Toda lógica de execução fica nos reusable workflows
+# ─────────────────────────────────────────────────────────────────
 
 jobs:
-  # ─────────────────────────────────────────────────────────────────
-  # ETAPA 1 — Definir ambiente
-  # ─────────────────────────────────────────────────────────────────
+  # ── 1. Centraliza decisão de ambiente ─────────────────────────
   set-environment:
     name: Definir Ambiente
     runs-on: ubuntu-latest
@@ -34,393 +40,73 @@ jobs:
           REF="${{ github.ref }}"
           EVENT="${{ github.event_name }}"
 
-          if [[ "$REF" == refs/tags/* ]]; then
-            # tag → começa pelo staging, prod vem depois em job separado
+          if [[ "$REF" == refs/tags/v* ]]; then
             echo "ENV=staging"    >> $GITHUB_OUTPUT
             echo "IS_DEPLOY=true" >> $GITHUB_OUTPUT
 
           elif [[ "$REF" == refs/heads/staging ]]; then
             echo "ENV=staging"     >> $GITHUB_OUTPUT
             echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
-            # push sem tag → só testes, sem apply
-
+            
           elif [[ "$REF" == refs/heads/main ]]; then
-            echo "ENV=production"   >> $GITHUB_OUTPUT
+            echo "ENV=production"  >> $GITHUB_OUTPUT
             echo "IS_DEPLOY=true"  >> $GITHUB_OUTPUT
-            # merge na main → production  
-
+            
           elif [[ "$EVENT" == "pull_request" ]]; then
             echo "ENV=staging"     >> $GITHUB_OUTPUT
             echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
-            # PR na main → valida contra configuração de staging
+            
+
 
           else
-            echo " Trigger não mapeado"
+            echo "Trigger não mapeado: REF=$REF EVENT=$EVENT"
             exit 1
           fi
-  # ─────────────────────────────────────────────────────────────────
-  # ETAPA 2 — Testes estáticos
-  # Roda sempre: PR, push staging, tag
-  # ─────────────────────────────────────────────────────────────────
+
+  # ── 2. Testes estáticos — roda sempre ─────────────────────────
   validate:
     name: Testes Estáticos
     needs: set-environment
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write # upload SARIF para aba Security
-      pull-requests: write # comentar no PR
+    uses: ./.github/workflows/validate.yaml
+    secrets: inherit
+    with:
+      environment: ${{ needs.set-environment.outputs.env_name }}
+      is_pull_request: ${{ github.event_name == 'pull_request' }}
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.ref }}
-          # ref garante checkout no commit exato da tag
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-
-      # ── 1. Formatação ──────────────────────────────────────────
-      - name: Terraform Format
-        working-directory: ${{ vars.TF_DIR }}
-        run: terraform fmt -check -recursive
-        # bloqueia se algum .tf não estiver formatado
-
-      # ── 2. Validação de sintaxe ────────────────────────────────
-      - name: Terraform Init (sem backend)
-        working-directory: ${{ vars.TF_DIR }}
-        run: terraform init -backend=false
-        # .terraform.lock.hcl commitado garante versão exata do provider
-        # sem necessidade de cache
-
-      - name: Terraform Validate
-        working-directory: ${{ vars.TF_DIR }}
-        run: terraform validate
-        # valida referências internas, tipos e argumentos
-
-      # ── 3. Lint de boas práticas ───────────────────────────────
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v4
-        with:
-          tflint_version: latest
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: TFLint
-        working-directory: ${{ vars.TF_DIR_LINT }}
-        run: |
-          tflint --init
-          tflint --recursive
-        # detecta: tipo de instância inválido, variáveis não usadas,
-        # argumentos deprecados, regras do provider AWS
-
-      # ── 4. Scan de segurança — tfsec ──────────────────────────
-      - name: tfsec
-        uses: aquasecurity/tfsec-action@v1.0.0
-        with:
-          working_directory: ${{ vars.TF_DIR }}
-          soft_fail: false
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-        # comenta no PR quando encontra falhas
-        # detecta: portas abertas, S3 público, criptografia ausente
-
-      # ── 5. Scan de segurança — Checkov ────────────────────────
-      - name: Criar diretório para resultados
-        run: mkdir -p results
-
-      - name: Checkov
-        uses: bridgecrewio/checkov-action@master
-        with:
-          directory: ${{ vars.TF_DIR }}
-          framework: terraform
-          soft_fail: false
-          output_format: sarif
-          output_file_path: results/checkov.sarif
-          skip_check: CKV_TF_1,CKV_TF_2
-        # complementa o tfsec com checagens diferentes
-
-      - name: Upload Checkov para GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: results/checkov.sarif
-        # resultado aparece em Security → Code Scanning do repositório
-
-      # ── 6. Estimativa de custo — Infracost ────────────────────
-      - name: Setup Infracost
-        uses: infracost/actions/setup@v3
-        with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
-        # chave gratuita em infracost.io
-
-      - name: Infracost breakdown
-        working-directory: ${{ vars.TF_DIR }}
-        run: |
-          infracost breakdown \
-            --path=. \
-            --format=json \
-            --out-file=/tmp/infracost.json
-
-      - name: Infracost comentar no PR
-        if: github.event_name == 'pull_request'
-        run: |
-          infracost comment github \
-            --path=/tmp/infracost.json \
-            --repo=$GITHUB_REPOSITORY \
-            --github-token=${{ secrets.GITHUB_TOKEN }} \
-            --pull-request=${{ github.event.pull_request.number }} \
-            --behavior=update
-        # atualiza o mesmo comentário a cada push no PR
-        # mostra diff de custo: quanto vai aumentar/diminuir
-
-  # ─────────────────────────────────────────────────────────────────
-  # ETAPA 3 — Plan Staging
-  # Roda em: PR na main, push staging, tag v*
-  # ─────────────────────────────────────────────────────────────────
+  # ── 3a. Plan Staging ──────────────────────────────────────────
   plan-staging:
-    name: Terraform Plan (staging)
-    runs-on: ubuntu-latest
+    name: Plan Staging
     needs: [set-environment, validate]
     if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && (
-        github.ref == 'refs/heads/staging' ||
-        startsWith(github.ref, 'refs/tags/v')
-      ))
-    permissions:
-      id-token: write
-      contents: read
-      pull-requests: write
+      needs.set-environment.outputs.env_name == 'staging'
+    uses: ./.github/workflows/plan-staging.yaml
+    secrets: inherit
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.ref }}
-          # ref garante checkout no commit exato da tag
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-
-      - name: Configurar credenciais AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ vars.REGION }}
-          role-to-assume: ${{ vars.AWS_ROLE }}
-
-      - name: Terraform Init
-        working-directory: ${{ vars.TF_DIR }}
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.BUCKET }}" \
-            -backend-config="key=${{ vars.KEY }}" \
-            -backend-config="region=${{ vars.REGION }}"
-
-      - name: Terraform Plan
-        id: plan
-        working-directory: ${{ vars.TF_DIR }}
-        env:
-          TFVARS: ${{ secrets.TFVARS }}
-        run: |
-          echo "$TFVARS" > terraform.tfvars
-          terraform plan \
-            -var-file="terraform.tfvars" \
-            -out=tfplan \
-            -no-color \
-            -input=false
-
-      - name: Salvar tfplan staging
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-staging
-          path: ${{ vars.TF_DIR }}/tfplan
-          retention-days: 1
-  # ─────────────────────────────────────────────────────────────────
-  # ETAPA 4 — Plan Production
-  # Roda somente no merge staging → main
-  # ─────────────────────────────────────────────────────────────────
+  # ── 3b. Plan Production ───────────────────────────────────────
   plan-production:
-    name: Terraform Plan (production)
-    runs-on: ubuntu-latest
-    needs: validate
+    name: Plan Production
+    needs: [set-environment, validate]
     if: |
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
-    permissions:
-      id-token: write
-      contents: read
+      needs.set-environment.outputs.env_name == 'production'
+    uses: ./.github/workflows/plan-production.yaml
+    secrets: inherit
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.ref }}
-          # ref garante checkout no commit exato da tag
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-
-      - name: Configurar credenciais AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ vars.REGION }}
-          role-to-assume: ${{ vars.AWS_ROLE }}
-
-      - name: Terraform Init
-        working-directory: ${{ vars.TF_DIR }}
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.BUCKET_PROD }}" \
-            -backend-config="key=${{ vars.KEY_PROD }}" \
-            -backend-config="region=${{ vars.REGION }}"
-
-      - name: Terraform Plan
-        id: plan
-        working-directory: ${{ vars.TF_DIR }}
-        env:
-          TFVARS: ${{ secrets.TFVARS_PROD }}
-        run: |
-          echo "$TFVARS" > terraform.tfvars
-          terraform plan \
-            -var-file="terraform.tfvars" \
-            -out=tfplan \
-            -no-color \
-            -input=false
-
-      - name: Salvar tfplan production
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-production
-          path: ${{ vars.TF_DIR }}/tfplan
-          retention-days: 1
-
-  # ─────────────────────────────────────────────────────────────────
-  # ETAPA 5 — Apply Staging
-  # Roda somente com tag v*
-  # ─────────────────────────────────────────────────────────────────
+  # ── 4a. Apply Staging (somente tag v*) ────────────────────────
   apply-staging:
-    name: Terraform Apply (staging)
-    runs-on: ubuntu-latest
-    needs: plan-staging
+    name: Apply Staging
+    needs: [set-environment, plan-staging]
     if: |
-      github.event_name == 'push' &&
-      startsWith(github.ref, 'refs/tags/v')
-    environment: staging
-    permissions:
-      id-token: write
-      contents: read
+      needs.set-environment.outputs.is_deploy == 'true' &&
+      needs.set-environment.outputs.env_name == 'staging'
+    uses: ./.github/workflows/apply-staging.yaml
+    secrets: inherit
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.ref }}
-          # ref garante checkout no commit exato da tag
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-
-      - name: Configurar credenciais AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ vars.REGION }}
-          role-to-assume: ${{ vars.AWS_ROLE }}
-
-      - name: Terraform Init
-        working-directory: ${{ vars.TF_DIR }}
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.BUCKET }}" \
-            -backend-config="key=${{ vars.KEY }}" \
-            -backend-config="region=${{ vars.REGION }}"
-
-      - name: Baixar tfplan staging
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-staging
-          path: ${{ vars.TF_DIR }}
-
-      - name: Terraform Apply
-        working-directory: ${{ vars.TF_DIR }}
-        run: terraform apply -auto-approve -input=false tfplan
-
-      - name: Resumo
-        run: |
-          echo "###  Staging aplicado com sucesso"                          >> $GITHUB_STEP_SUMMARY
-          echo "- **Tag:** ${{ github.ref_name }}"                            >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** ${{ github.sha }}"                              >> $GITHUB_STEP_SUMMARY
-          echo ""                                                             >> $GITHUB_STEP_SUMMARY
-          echo "Abra o PR \`staging → main\` para promover para produção."   >> $GITHUB_STEP_SUMMARY
-
-  # ─────────────────────────────────────────────────────────────────
-  # ETAPA 6 — Apply Production
-  # Roda somente após merge staging → main
-  # Protegido por aprovação manual no GitHub varsironment
-  # ─────────────────────────────────────────────────────────────────
+  # ── 4b. Apply Production (aguarda aprovação manual) ───────────
   apply-production:
-    name: Terraform Apply (production)
-    runs-on: ubuntu-latest
-    needs: plan-production
+    name: Apply Production
+    needs: [set-environment, plan-production]
     if: |
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
-    environment: production
-    # Settings → environments → production → Required reviewers
-    # pipeline pausa aqui até aprovação manual
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.ref }}
-          # ref garante checkout no commit exato da tag
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-
-      - name: Configurar credenciais AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ vars.REGION }}
-          role-to-assume: ${{ vars.AWS_ROLE }}
-
-      - name: Terraform Init
-        working-directory: ${{ vars.TF_DIR }}
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.BUCKET_PROD }}" \
-            -backend-config="key=${{ vars.KEY_PROD }}" \
-            -backend-config="region=${{ vars.REGION }}"
-
-      - name: Baixar tfplan production
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-production
-          path: ${{ vars.TF_DIR }}
-
-      - name: Terraform Apply
-        working-directory: ${{ vars.TF_DIR }}
-        run: terraform apply -auto-approve -input=false tfplan
-
-      - name: Resumo
-        run: |
-          echo "###  Production aplicado com sucesso" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** ${{ github.sha }}"        >> $GITHUB_STEP_SUMMARY
+      needs.set-environment.outputs.is_deploy == 'true' &&
+      needs.set-environment.outputs.env_name == 'production'
+    uses: ./.github/workflows/apply-production.yaml
+    secrets: inherit

@@ -1,0 +1,68 @@
+name: Terraform Plan (staging)
+
+on:
+  workflow_call:
+    secrets:
+      TFVARS:
+        required: true
+
+# ─────────────────────────────────────────────────────────────────
+# Plan Staging
+# Roda em: PR na main, push staging, tag v*
+# Salva tfplan como artefato para o apply-staging consumir
+# ─────────────────────────────────────────────────────────────────
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ vars.TF_VERSION }}
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE }}
+
+      - name: Terraform Init
+        working-directory: ${{ vars.TF_DIR }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.BUCKET }}" \
+            -backend-config="key=${{ vars.KEY }}" \
+            -backend-config="region=${{ vars.REGION }}"
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ vars.TF_DIR }}
+        env:
+          TFVARS: ${{ secrets.TFVARS }}
+        run: |
+          echo "$TFVARS" > terraform.tfvars
+          terraform plan \
+            -var-file="terraform.tfvars" \
+            -out=tfplan \
+            -no-color \
+            -input=false
+
+      - name: Salvar tfplan staging
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-staging
+          path: ${{ vars.TF_DIR }}/tfplan
+          retention-days: 1

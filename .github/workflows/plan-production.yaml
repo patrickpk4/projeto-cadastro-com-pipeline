@@ -1,0 +1,67 @@
+name: Terraform Plan (production)
+
+on:
+  workflow_call:
+    secrets:
+      TFVARS_PROD:
+        required: true
+
+# ─────────────────────────────────────────────────────────────────
+# Plan Production
+# Roda somente no merge staging → main
+# Salva tfplan como artefato para o apply-production consumir
+# ─────────────────────────────────────────────────────────────────
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ vars.TF_VERSION }}
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE }}
+
+      - name: Terraform Init
+        working-directory: ${{ vars.TF_DIR_PROD }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.BUCKET_PROD }}" \
+            -backend-config="key=${{ vars.KEY_PROD }}" \
+            -backend-config="region=${{ vars.REGION }}"
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ vars.TF_DIR_PROD }}
+        env:
+          TFVARS: ${{ secrets.TFVARS_PROD }}
+        run: |
+          echo "$TFVARS" > terraform.tfvars
+          terraform plan \
+            -var-file="terraform.tfvars" \
+            -out=tfplan \
+            -no-color \
+            -input=false
+
+      - name: Salvar tfplan production
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-production
+          path: ${{ vars.TF_DIR_PROD }}/tfplan
+          retention-days: 1

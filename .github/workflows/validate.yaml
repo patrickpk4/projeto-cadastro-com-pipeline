@@ -1,0 +1,127 @@
+name: Terraform Validate
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Ambiente alvo (staging | production)"
+        required: true
+        type: string
+      is_pull_request:
+        description: "true quando chamado de um PR"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      INFRACOST_API_KEY:
+        required: true
+
+# ─────────────────────────────────────────────────────────────────
+# Testes estáticos — roda em todo trigger
+# fmt → init → validate → tflint → tfsec → checkov → infracost
+# ─────────────────────────────────────────────────────────────────
+
+jobs:
+  static-tests:
+    name: Testes Estáticos
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload SARIF → aba Security
+      pull-requests: write # comentar no PR
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ vars.TF_VERSION }}
+
+        # ── Resolve diretório automaticamente ─────────────
+      - name: Set DIR
+        run: |
+          echo "DIR=infra/env/${{ inputs.environment }}" >> $GITHUB_ENV
+
+      # ── 1. Formatação ────────────────────────────────────────
+      - name: Terraform Format
+        working-directory: ${{ vars.DIR }}
+        run: terraform fmt -check -recursive
+
+      # ── 2. Validação de sintaxe ──────────────────────────────
+      - name: Terraform Init (sem backend)
+        working-directory: ${{ vars.DIR }}
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        working-directory: ${{ vars.DIR }}
+        run: terraform validate
+
+      # ── 3. Lint ──────────────────────────────────────────────
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: TFLint
+        working-directory: ${{ vars.TF_DIR_LINT }}
+        run: |
+          tflint --init
+          tflint --recursive
+
+      # ── 4. Segurança — tfsec ─────────────────────────────────
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: ${{ vars.DIR }}
+          soft_fail: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 5. Segurança — Checkov ───────────────────────────────
+      - name: Criar diretório para resultados
+        run: mkdir -p results
+
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: ${{ vars.DIR }}
+          framework: terraform
+          soft_fail: false
+          output_format: sarif
+          output_file_path: results/checkov.sarif
+          skip_check: CKV_TF_1,CKV_TF_2
+
+      - name: Upload Checkov → GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: results/checkov.sarif
+
+      # ── 6. Estimativa de custo — Infracost ───────────────────
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Infracost breakdown
+        working-directory: ${{ vars.DIR }}
+        run: |
+          infracost breakdown \
+            --path=. \
+            --format=json \
+            --out-file=/tmp/infracost.json
+
+      - name: Infracost comentar no PR
+        if: inputs.is_pull_request == true
+        run: |
+          infracost comment github \
+            --path=/tmp/infracost.json \
+            --repo=$GITHUB_REPOSITORY \
+            --github-token=${{ secrets.GITHUB_TOKEN }} \
+            --pull-request=${{ github.event.pull_request.number }} \
+            --behavior=update
