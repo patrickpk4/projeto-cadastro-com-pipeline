@@ -43,7 +43,7 @@ jobs:
           terraform_version: ${{ vars.TF_VERSION }}
 
         # ── Resolve diretório automaticamente ─────────────
-      - name: Set TF_DIR
+      - name: Set DIR
         run: |
           echo "DIR=infra/env/${{ inputs.environment }}" >> $GITHUB_ENV
 
@@ -58,7 +58,7 @@ jobs:
         run: terraform init -backend=false
 
       - name: Terraform Validate
-        working-directory: ${{ vars.TF_DIR }}
+        working-directory: ${{ vars.DIR }}
         run: terraform validate
 
       # ── 3. Lint ──────────────────────────────────────────────

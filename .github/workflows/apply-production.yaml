@@ -39,7 +39,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE }}
 
       - name: Terraform Init
-        working-directory: ${{ vars.TF_DIR }}
+        working-directory: ${{ vars.TF_DIR_PROD }}
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.BUCKET_PROD }}" \
@@ -50,10 +50,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: tfplan-production
-          path: ${{ vars.TF_DIR }}
+          path: ${{ vars.TF_DIR_PROD }}
 
       - name: Terraform Apply
-        working-directory: ${{ vars.TF_DIR }}
+        working-directory: ${{ vars.TF_DIR_PROD }}
         run: terraform apply -auto-approve -input=false tfplan
 
       - name: Resumo

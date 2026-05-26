@@ -39,7 +39,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE }}
 
       - name: Terraform Init
-        working-directory: ${{ vars.TF_DIR }}
+        working-directory: ${{ vars.TF_DIR_PROD }}
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.BUCKET_PROD }}" \
@@ -48,7 +48,7 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        working-directory: ${{ vars.TF_DIR }}
+        working-directory: ${{ vars.TF_DIR_PROD }}
         env:
           TFVARS: ${{ secrets.TFVARS_PROD }}
         run: |
@@ -63,5 +63,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-production
-          path: ${{ vars.TF_DIR }}/tfplan
+          path: ${{ vars.TF_DIR_PROD }}/tfplan
           retention-days: 1
