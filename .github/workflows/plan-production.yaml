@@ -3,8 +3,6 @@ name: Terraform Plan (production)
 on:
   workflow_call:
     secrets:
-      GITHUB_TOKEN:
-        required: false
       TFVARS_PROD:
         required: true
 

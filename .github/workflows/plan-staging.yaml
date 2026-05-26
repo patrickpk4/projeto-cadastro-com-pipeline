@@ -3,8 +3,6 @@ name: Terraform Plan (staging)
 on:
   workflow_call:
     secrets:
-      GITHUB_TOKEN:
-        required: false
       TFVARS:
         required: true
 
