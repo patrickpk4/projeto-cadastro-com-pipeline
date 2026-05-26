@@ -11,7 +11,10 @@ on:
       - main
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
-    paths-ignore: ["./**/infra/**.md", "./**/src/**", "./**/*.yaml"]
+    paths-ignore:
+      - "infra/**/*.md"
+      - "src/**"
+      - "**/*.yaml"
 
 permissions:
   contents: read
