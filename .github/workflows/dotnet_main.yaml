@@ -93,6 +93,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Restore
+        working-directory: src/PedeLogo.Catalogo.Api
+        run: dotnet restore
+
       - name: Build
         working-directory: src/PedeLogo.Catalogo.Api
         run: dotnet build --configuration Release --no-restore
