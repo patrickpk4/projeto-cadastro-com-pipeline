@@ -76,7 +76,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
-
+      # ── Resolve diretório automaticamente ─────────────
+      - name: Set DIR
+        run: |
+          echo "DIR=src/env/${{ needs.set-environment.outputs.env_name }}" >> $GITHUB_ENV
       - name:
           Setup .NET build dependencies
           # You may pin to the exact commit or the version.
@@ -95,4 +98,5 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Build
+        working-directory: ${{ vars.DIR }}
         run: dotnet build --configuration Release --no-restore
