@@ -70,3 +70,8 @@ jobs:
             -Dsonar.project_Key=${{secrets.SONAR_PROJECT_KEY}}
             -Dsonar.organization=${{secrets.SONAR_ORGANIZATION}}
             -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.coverage.exclusions=**/Tests/**
+            -Dsonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
+            -Dsonar.verbose=true
+            -Dsonar.cs.vstest.reportsPaths=**/TestResults/*.trx
+            -Dsonar.cs.vstest.reportsPaths=**/TestResults/*.xml
