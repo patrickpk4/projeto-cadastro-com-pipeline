@@ -91,6 +91,7 @@ jobs:
 
       - name: Set DIR
         run: echo "DIR=infra/env/${{ inputs.environment }}" >> $GITHUB_ENV
+
       - name: tfsec
         uses: aquasecurity/tfsec-action@v1.0.0
         with:
@@ -134,6 +135,7 @@ jobs:
 
       - name: Set DIR
         run: echo "DIR=infra/env/${{ inputs.environment }}" >> $GITHUB_ENV
+
       - name: Setup Infracost
         uses: infracost/actions/setup@v3
         with:
