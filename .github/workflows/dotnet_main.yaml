@@ -94,5 +94,5 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Build
-        working-directory: src/PedeLogoCatalogo.Api
+        working-directory: src/PedeLogo.Catalogo.Api
         run: dotnet build --configuration Release --no-restore
