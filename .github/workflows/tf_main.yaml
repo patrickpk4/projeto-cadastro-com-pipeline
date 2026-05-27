@@ -111,5 +111,4 @@ jobs:
       needs.set-environment.outputs.is_deploy == 'true' &&
       needs.set-environment.outputs.env_name == 'production'
     uses: ./.github/workflows/tf_apply_prod.yaml
-    secrets:
-      github_token: inherit
+    secrets: inherit
