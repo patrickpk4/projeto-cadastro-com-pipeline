@@ -1,1 +1,79 @@
 
+name: dotnet-build 
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["**/src/production/*.*"]
+
+  push:
+    branches:
+      - staging
+      - main
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+    paths-ignore:
+      - "infra/**/*.md"
+      - "src/**/*.md"
+      - "**/*.yaml"  
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+  id-token: write
+  
+jobs:
+  # ── 1. Centraliza decisão de ambiente ─────────────────────────
+  set-environment:
+    name: Definir Ambiente
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set-env.outputs.ENV }}
+      is_deploy: ${{ steps.set-env.outputs.IS_DEPLOY }}
+
+    steps:
+      - name: Resolver ambiente pelo trigger
+        id: set-env
+        run: |
+          REF="${{ github.ref }}"
+          EVENT="${{ github.event_name }}"
+
+          if [[ "$REF" == refs/tags/v* ]]; then
+            echo "ENV=staging"    >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=true" >> $GITHUB_OUTPUT
+
+          elif [[ "$REF" == refs/heads/staging ]]; then
+            echo "ENV=staging"     >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
+            
+          elif [[ "$REF" == refs/heads/main ]]; then
+            echo "ENV=production"  >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=true"  >> $GITHUB_OUTPUT
+            
+          elif [[ "$EVENT" == "pull_request" ]]; then
+            echo "ENV=staging"     >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
+            
+
+
+          else
+            echo "Trigger não mapeado: REF=$REF EVENT=$EVENT"
+            exit 1
+          fi
+    
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: Setup .NET build dependencies
+          # You may pin to the exact commit or the version.
+          # uses: timheuer/bootstrap-dotnet@24cc1daf4eac0fa670c7f5773108f26d90f54baa
+        uses: timheuer/bootstrap-dotnet@v3
+        with:
+          # What .NET SDK version to use
+          dotnet-version: "8.0.x"    
+
+        
