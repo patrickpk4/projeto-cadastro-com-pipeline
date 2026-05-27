@@ -83,7 +83,8 @@ jobs:
     if: |
       needs.set-environment.outputs.env_name == 'staging'
     uses: ./.github/workflows/tf_plan_stag.yaml
-    secrets: inherit
+    secrets:
+      github_token: ${{ secrets.GITHUB_TOKEN }}
 
   # ── 3b. Plan Production ───────────────────────────────────────
   plan-production:
@@ -92,7 +93,8 @@ jobs:
     if: |
       needs.set-environment.outputs.env_name == 'production'
     uses: ./.github/workflows/tf_plan_prod.yaml
-    secrets: inherit
+    secrets:
+      github_token: ${{ secrets.GITHUB_TOKEN }}
 
   # ── 4a. Apply Staging (somente tag v*) ────────────────────────
   apply-staging:
@@ -102,7 +104,8 @@ jobs:
       needs.set-environment.outputs.is_deploy == 'true' &&
       needs.set-environment.outputs.env_name == 'staging'
     uses: ./.github/workflows/tf_apply_stag.yaml
-    secrets: inherit
+    secrets:
+      github_token: ${{ secrets.GITHUB_TOKEN }}
 
   # ── 4b. Apply Production (aguarda aprovação manual) ───────────
   apply-production:
@@ -112,4 +115,5 @@ jobs:
       needs.set-environment.outputs.is_deploy == 'true' &&
       needs.set-environment.outputs.env_name == 'production'
     uses: ./.github/workflows/tf_apply_prod.yaml
-    secrets: inherit
+    secrets:
+      github_token: ${{ secrets.GITHUB_TOKEN }}

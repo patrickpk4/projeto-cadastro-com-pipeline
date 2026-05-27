@@ -23,52 +23,13 @@ permissions:
   id-token: write
 
 jobs:
-  # ── 1. Centraliza decisão de ambiente ─────────────────────────
-  set-environment:
-    name: Definir Ambiente
-    runs-on: ubuntu-latest
-    outputs:
-      env_name: ${{ steps.set-env.outputs.ENV }}
-      is_deploy: ${{ steps.set-env.outputs.IS_DEPLOY }}
-
-    steps:
-      - name: Resolver ambiente pelo trigger
-        id: set-env
-        run: |
-          REF="${{ github.ref }}"
-          EVENT="${{ github.event_name }}"
-
-          if [[ "$REF" == refs/tags/v* ]]; then
-            echo "ENV=staging"    >> $GITHUB_OUTPUT
-            echo "IS_DEPLOY=true" >> $GITHUB_OUTPUT
-
-          elif [[ "$REF" == refs/heads/staging ]]; then
-            echo "ENV=staging"     >> $GITHUB_OUTPUT
-            echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
-            
-          elif [[ "$REF" == refs/heads/main ]]; then
-            echo "ENV=production"  >> $GITHUB_OUTPUT
-            echo "IS_DEPLOY=true"  >> $GITHUB_OUTPUT
-            
-          elif [[ "$EVENT" == "pull_request" ]]; then
-            echo "ENV=staging"     >> $GITHUB_OUTPUT
-            echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
-            
-
-
-          else
-            echo "Trigger não mapeado: REF=$REF EVENT=$EVENT"
-            exit 1
-          fi
-
-    # ────────────────────────────────────────────────────────────────
-    # ETAPA 2 — Build e Testes
-    # Roda sempre: PR, push staging, push main, tag
-    # ────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────
+  # ETAPA 2 — Build e Testes
+  # Roda sempre: PR, push staging, push main, tag
+  # ────────────────────────────────────────────────────────────────
   build:
     name: Build e Testes
     runs-on: ubuntu-latest
-    needs: set-environment
 
     steps:
       - name: Checkout
@@ -100,3 +61,12 @@ jobs:
       - name: Build
         working-directory: src/PedeLogo.Catalogo.Api
         run: dotnet build --configuration Release --no-restore
+
+      - name: sonarscanner
+        uses: sonarsource/sonarcloud-github-action@master
+        with:
+          args: >
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.project_Key=${{secrets.SONAR_PROJECT_KEY}}
+            -Dsonar.organization=${{secrets.SONAR_ORGANIZATION}}
+            -Dsonar.host.url=https://sonarcloud.io
