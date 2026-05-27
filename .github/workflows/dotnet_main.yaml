@@ -1,5 +1,4 @@
-
-name: dotnet-build 
+name: dotnet-build
 
 on:
   pull_request:
@@ -15,14 +14,14 @@ on:
     paths-ignore:
       - "infra/**/*.md"
       - "src/**/*.md"
-      - "**/*.yaml"  
+      #- "**/*.yaml"
 
 permissions:
   contents: read
   pull-requests: write
   security-events: write
   id-token: write
-  
+
 jobs:
   # ── 1. Centraliza decisão de ambiente ─────────────────────────
   set-environment:
@@ -61,19 +60,39 @@ jobs:
             echo "Trigger não mapeado: REF=$REF EVENT=$EVENT"
             exit 1
           fi
-    
+
+    # ────────────────────────────────────────────────────────────────
+    # ETAPA 2 — Build e Testes
+    # Roda sempre: PR, push staging, push main, tag
+    # ────────────────────────────────────────────────────────────────
+  build:
+    name: Build e Testes
+    runs-on: ubuntu-latest
+    needs: set-environment
+
+    steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
 
-      - name: Setup .NET build dependencies
+      - name:
+          Setup .NET build dependencies
           # You may pin to the exact commit or the version.
           # uses: timheuer/bootstrap-dotnet@24cc1daf4eac0fa670c7f5773108f26d90f54baa
         uses: timheuer/bootstrap-dotnet@v3
         with:
           # What .NET SDK version to use
-          dotnet-version: "8.0.x"    
+          dotnet-version: "8.0.x"
 
-        
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
