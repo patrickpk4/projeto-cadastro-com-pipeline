@@ -2,6 +2,7 @@
 
     <PropertyGroup>
       <TargetFramework>net8.0</TargetFramework>
+      <GenerateProgramFile>false</GenerateProgramFile>
       <UserSecretsId>9ba345b1-7ee7-4e12-99d5-925aed3bad75</UserSecretsId>
       <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
       <DockerfileContext>..\..</DockerfileContext>
