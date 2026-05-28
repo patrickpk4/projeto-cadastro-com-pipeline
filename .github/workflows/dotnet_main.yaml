@@ -73,8 +73,7 @@ jobs:
             /o:"${{ secrets.SONAR_ORGANIZATION }}" \
             /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.cs.opencover.reportsPaths="./TestResults/**/coverage.opencover.xml"
-            "/d:sonar.vstest.reportsPaths=src/PedeLogo.Catalogo.Api/TestResults/*.trx" 
+            /d:sonar.cs.opencover.reportsPaths="./TestResults/**/coverage.opencover.xml" 
             /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/Startup.cs"
 
       - name: Build
