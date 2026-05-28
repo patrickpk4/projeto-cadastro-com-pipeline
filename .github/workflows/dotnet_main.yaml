@@ -62,10 +62,20 @@ jobs:
         working-directory: src/PedeLogo.Catalogo.Api
         run: dotnet restore
 
-      - name: SonarCloud Scan
-        uses: sonarsource/sonarqube-scan-action@v8
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: instlar sonar-scanner
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+
+      - name: sonar begin
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${{ secrets.SONAR_PROJECT_KEY }}" \
+            /o:"${{ secrets.SONAR_ORGANIZATION }}" \
+            /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="./TestResults/**/coverage.opencover.xml"
+            /d:sonar.vstest.reportsPaths="**/TestResults/*.trx" 
+            /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/Startup.cs"
 
       - name: Build
         working-directory: src/PedeLogo.Catalogo.Api
@@ -81,7 +91,13 @@ jobs:
             --results-directory ./TestResults \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
-      - name: SonarCloud Scan
-        uses: sonarsource/sonarqube-scan-action@v8
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: sonar end
+        run: |
+          dotnet sonarscanner end \
+            /d:SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}"
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: src/PedeLogo.Catalogo.Api/TestResults/*.trx
