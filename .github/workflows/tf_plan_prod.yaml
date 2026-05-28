@@ -5,6 +5,12 @@ on:
     secrets:
       TFVARS_PROD:
         required: true
+      AWS_ROLE:
+        required: true
+      BUCKET_PROD:
+        required: true
+      KEY_PROD:
+        required: true
 
 # ─────────────────────────────────────────────────────────────────
 # Plan Production
