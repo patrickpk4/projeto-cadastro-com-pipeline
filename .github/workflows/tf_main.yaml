@@ -14,7 +14,7 @@ on:
     paths-ignore:
       - "infra/**/*.md"
       - "src/**"
-      #- "**/*.yaml"
+      - "**/*.yaml"
 
 permissions:
   contents: read

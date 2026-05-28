@@ -47,10 +47,10 @@ namespace PedeLogo.Catalogo.UnitTests
                 new Produto { Id = ObjectId.GenerateNewId().ToString(), Nome = "Refrigerante", Preco = 7.00, Categoria = "Bebida" }
             };
 
-            var findFluentMock = CriarFindFluentMock(produtos);
+            var cursorMock = CriarCursorMock(produtos);
             _collectionMock
                 .Setup(c => c.Find(It.IsAny<BsonDocument>(), null))
-                .Returns(findFluentMock.Object);
+                .Returns(cursorMock.Object);
 
             var resultado = _controller.Get();
 
@@ -62,10 +62,10 @@ namespace PedeLogo.Catalogo.UnitTests
         [Trait("Category", "Unit")]
         public void Get_QuandoNaoExistemProdutos_DeveRetornarListaVazia()
         {
-            var findFluentMock = CriarFindFluentMock(new List<Produto>());
+            var cursorMock = CriarCursorMock(new List<Produto>());
             _collectionMock
                 .Setup(c => c.Find(It.IsAny<BsonDocument>(), null))
-                .Returns(findFluentMock.Object);
+                .Returns(cursorMock.Object);
 
             var resultado = _controller.Get();
 
@@ -81,10 +81,10 @@ namespace PedeLogo.Catalogo.UnitTests
             var id = ObjectId.GenerateNewId().ToString();
             var produto = new Produto { Id = id, Nome = "Hamburguer", Preco = 25.00, Categoria = "Comida" };
 
-            var findFluentMock = CriarFindFluentMock(new List<Produto> { produto });
+            var cursorMock = CriarCursorMock(new List<Produto> { produto });
             _collectionMock
                 .Setup(c => c.Find(It.IsAny<System.Linq.Expressions.Expression<System.Func<Produto, bool>>>(), null))
-                .Returns(findFluentMock.Object);
+                .Returns(cursorMock.Object);
 
             var resultado = _controller.Get(id);
 
@@ -184,21 +184,24 @@ namespace PedeLogo.Catalogo.UnitTests
 
         // ─── Helpers ──────────────────────────────────────────────────────────
 
-        // CORRIGIDO: retorna IFindFluent em vez de IAsyncCursor
-        // MongoDB.Driver 2.12+ exige IFindFluent no retorno de .Find()
-        private static Mock<IFindFluent<Produto, Produto>> CriarFindFluentMock(List<Produto> produtos)
+        private static Mock<IAsyncCursor<Produto>> CriarCursorMock(List<Produto> produtos)
         {
-            var findFluentMock = new Mock<IFindFluent<Produto, Produto>>();
+            var cursorMock = new Mock<IAsyncCursor<Produto>>();
+            cursorMock.Setup(c => c.Current).Returns(produtos);
+            cursorMock
+                .SetupSequence(c => c.MoveNext(default))
+                .Returns(true)
+                .Returns(false);
 
+            var findFluentMock = new Mock<IFindFluent<Produto, Produto>>();
             findFluentMock
                 .Setup(f => f.ToList(default))
                 .Returns(produtos);
-
             findFluentMock
                 .Setup(f => f.FirstOrDefault(default))
                 .Returns(produtos.Count > 0 ? produtos[0] : null);
 
-            return findFluentMock;
+            return cursorMock;
         }
     }
 }

@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5455FB51-2A59-471B-A928-001FA47FE357}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PedeLogo.Catalogo.Api", "src\PedeLogo.Catalogo.Api\PedeLogo.Catalogo.Api.csproj", "{69C9E1A9-FC74-47B6-9184-F5BDE2FBAD4F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{D6D9D1E7-514D-4D57-A37C-295AD345D0E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PedeLogo.Catalogo.IntegrationTests", "tests\PedeLogo.Catalogo.IntegrationTests\PedeLogo.Catalogo.IntegrationTests.csproj", "{EB43F313-3E31-4BE9-B339-B04DF0E1FA06}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PedeLogo.Catalogo.UnitTests", "tests\PedeLogo.Catalogo.UnitTests\PedeLogo.Catalogo.UnitTests.csproj", "{A6DB3BF7-6ECA-4D69-A15F-7C1DBF23C81E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{69C9E1A9-FC74-47B6-9184-F5BDE2FBAD4F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69C9E1A9-FC74-47B6-9184-F5BDE2FBAD4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69C9E1A9-FC74-47B6-9184-F5BDE2FBAD4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69C9E1A9-FC74-47B6-9184-F5BDE2FBAD4F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB43F313-3E31-4BE9-B339-B04DF0E1FA06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB43F313-3E31-4BE9-B339-B04DF0E1FA06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB43F313-3E31-4BE9-B339-B04DF0E1FA06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB43F313-3E31-4BE9-B339-B04DF0E1FA06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6DB3BF7-6ECA-4D69-A15F-7C1DBF23C81E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6DB3BF7-6ECA-4D69-A15F-7C1DBF23C81E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6DB3BF7-6ECA-4D69-A15F-7C1DBF23C81E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6DB3BF7-6ECA-4D69-A15F-7C1DBF23C81E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{69C9E1A9-FC74-47B6-9184-F5BDE2FBAD4F} = {5455FB51-2A59-471B-A928-001FA47FE357}
+		{EB43F313-3E31-4BE9-B339-B04DF0E1FA06} = {D6D9D1E7-514D-4D57-A37C-295AD345D0E8}
+		{A6DB3BF7-6ECA-4D69-A15F-7C1DBF23C81E} = {D6D9D1E7-514D-4D57-A37C-295AD345D0E8}
+	EndGlobalSection
+EndGlobal

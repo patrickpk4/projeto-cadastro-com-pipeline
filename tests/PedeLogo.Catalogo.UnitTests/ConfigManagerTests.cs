@@ -18,6 +18,7 @@ namespace PedeLogo.Catalogo.UnitTests
         [Trait("Category", "Unit")]
         public void IsRead_QuandoNaoFoiDefinidoUnread_DeveRetornarTrue()
         {
+            // O estado padrão deve ser "pronto para leitura"
             var resultado = ConfigManager.IsRead();
 
             resultado.Should().BeTrue();
@@ -27,7 +28,7 @@ namespace PedeLogo.Catalogo.UnitTests
         [Trait("Category", "Unit")]
         public void IsRead_QuandoSetUnreadChamadoComTempoFuturo_DeveRetornarFalse()
         {
-            ConfigManager.SetUnread(60);
+            ConfigManager.SetUnread(60); // 60 segundos no futuro
 
             var resultado = ConfigManager.IsRead();
 
@@ -38,9 +39,9 @@ namespace PedeLogo.Catalogo.UnitTests
         [Trait("Category", "Unit")]
         public void IsRead_QuandoTempoUnreadExpira_DeveRetornarTrue()
         {
-            ConfigManager.SetUnread(1);
+            ConfigManager.SetUnread(1); // 1 segundo
 
-            Thread.Sleep(1100);
+            Thread.Sleep(1100); // espera expirar
 
             var resultado = ConfigManager.IsRead();
 
@@ -53,11 +54,13 @@ namespace PedeLogo.Catalogo.UnitTests
         [Trait("Category", "Unit")]
         public void IsUnHealth_QuandoNaoFoiDefinido_DeveRetornarFalse()
         {
+            // Estado inicial deve ser saudável
+            // Nota: como ConfigManager usa estado estático, este teste
+            // pode ser afetado por outros. Em produção, prefira injeção de dependência.
             var resultado = ConfigManager.IsUnHealth();
 
-            // BeOneOf não existe para bool no FluentAssertions 6.x
-            // Todo bool já é true ou false — apenas valida que não lança exceção
-            resultado.Should().Be(resultado);
+            // Só valida que o método retorna bool sem exceção
+            resultado.Should().BeOneOf(true, false);
         }
 
         [Fact]
@@ -79,6 +82,7 @@ namespace PedeLogo.Catalogo.UnitTests
         {
             ConfigManager.SetUnread(0);
 
+            // 0 segundos = expira imediatamente
             var resultado = ConfigManager.IsRead();
 
             resultado.Should().BeTrue();

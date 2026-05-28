@@ -35,19 +35,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
+
+      - name: Setup java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
       - name:
           Setup .NET build dependencies
           # You may pin to the exact commit or the version.
           # uses: timheuer/bootstrap-dotnet@24cc1daf4eac0fa670c7f5773108f26d90f54baa
-        uses: timheuer/bootstrap-dotnet@v3
+        uses: timheuer/bootstrap-dotnet@v4
         with:
           # What .NET SDK version to use
           dotnet-version: "8.0.x"
 
       - name: Cache NuGet packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -58,12 +66,8 @@ jobs:
         working-directory: src/PedeLogo.Catalogo.Api
         run: dotnet restore
 
-      - name: Build
-        working-directory: src/PedeLogo.Catalogo.Api
-        run: dotnet build --configuration Release --no-restore
-
-      - name: sonarscanner
-        uses: sonarsource/sonarcloud-github-action@master
+      - name: sonarscanner begin
+        uses: sonarsource/sonarcloud-github-action@v4
         with:
           args: >
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
@@ -74,6 +78,21 @@ jobs:
             -Dsonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
             -Dsonar.verbose=true
             -Dsonar.cs.vstest.reportsPaths=**/TestResults/*.trx
-            -Dsonar.cs.vstest.reportsPaths=**/TestResults/*.xml
 
-####
+      - name: Build
+        working-directory: src/PedeLogo.Catalogo.Api
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Testes Unitários
+        run: |
+          dotnet test tests/PedeLogo.Catalogo.UnitTests \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=unit-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+          #  Sonar End — depois dos testes, lê o coverage gerado
+      - name: Sonar End
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
