@@ -2,7 +2,19 @@ name: Terraform Apply (production)
 
 on:
   workflow_call:
-
+    secrets:
+      TFVARS_PROD:
+        description: "Arquivo tfvars para produção"
+        required: true
+      BUCKET_PROD:
+        description: "Bucket S3 para backend Terraform produção"
+        required: true
+      KEY_PROD:
+        description: "Chave no bucket S3 para backend Terraform produção"
+        required: true
+      AWS_ROLE:
+        description: "ARN do Role AWS para assumir durante o apply"
+        required: true
 # ─────────────────────────────────────────────────────────────────
 # Apply Production
 # Roda somente após merge staging → main
