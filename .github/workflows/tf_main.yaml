@@ -97,7 +97,10 @@ jobs:
     if: |
       needs.set-environment.outputs.env_name == 'production'
     uses: ./.github/workflows/tf_plan_prod.yaml
-    secrets: inherit
+    secrets:
+      TFVARS_PROD: ${{ secrets.TFVARS_PROD }}
+      BUCKET_PROD: ${{ secrets.BUCKET_PROD }}
+      KEY_PROD: ${{ secrets.KEY_PROD }}
 
   # ── 4a. Apply Staging (somente tag v*) ────────────────────────
   apply-staging:
@@ -107,7 +110,11 @@ jobs:
       needs.set-environment.outputs.is_deploy == 'true' &&
       needs.set-environment.outputs.env_name == 'staging'
     uses: ./.github/workflows/tf_apply_stag.yaml
-    secrets: inherit
+    secrets:
+      TFVARS: ${{ secrets.TFVARS }}
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
+      BUCKET: ${{ secrets.BUCKET }}
+      KEY: ${{ secrets.KEY }}
 
   # ── 4b. Apply Production (aguarda aprovação manual) ───────────
   apply-production:
@@ -117,4 +124,7 @@ jobs:
       needs.set-environment.outputs.is_deploy == 'true' &&
       needs.set-environment.outputs.env_name == 'production'
     uses: ./.github/workflows/tf_apply_prod.yaml
-    secrets: inherit
+    secrets:
+      TFVARS_PROD: ${{ secrets.TFVARS_PROD }}
+      BUCKET_PROD: ${{ secrets.BUCKET_PROD }}
+      KEY_PROD: ${{ secrets.KEY_PROD }}
