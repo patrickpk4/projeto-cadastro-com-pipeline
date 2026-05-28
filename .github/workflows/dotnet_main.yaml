@@ -49,24 +49,18 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-          cache: false
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Restore
         working-directory: src/PedeLogo.Catalogo.Api
         run: dotnet restore
-
-      - name: sonarscanner begin
-        uses: sonarsource/sonarcloud-github-action@v4
-        with:
-          args: >
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-            -Dsonar.projectKey=${{secrets.SONAR_PROJECT_KEY}}
-            -Dsonar.organization=${{secrets.SONAR_ORGANIZATION}}
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.coverage.exclusions=**/Tests/**
-            -Dsonar.cs.opencover.reportsPaths=**/coverage.opencover.xml
-            -Dsonar.verbose=true
-            -Dsonar.cs.vstest.reportsPaths=**/TestResults/*.trx
 
       - name: Build
         working-directory: src/PedeLogo.Catalogo.Api
@@ -82,6 +76,15 @@ jobs:
             --results-directory ./TestResults \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
-          #  Sonar End — depois dos testes, lê o coverage gerado
-      - name: Sonar End
-        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+      - name: sonarcloud
+        uses: sonarsource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          sonar.host.url: https://sonarcloud.io
+        with:
+          args: >
+            -Dsonar.projectKey=${{secrets.SONAR_PROJECT_KEY}}
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml
+            -Dsonar.cs.vstest.reportsPaths=**/TestResults/*.trx
+            -Dsonar.coverage.exclusions=**/Migrations/**
