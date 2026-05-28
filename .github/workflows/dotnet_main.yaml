@@ -90,6 +90,8 @@ jobs:
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: sonar end
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet sonarscanner end \
             /d:SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}"
