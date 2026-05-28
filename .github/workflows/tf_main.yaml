@@ -14,7 +14,7 @@ on:
     paths-ignore:
       - "infra/**/*.md"
       - "src/**"
-      - "**/*.yaml"
+      #- "**/*.yaml"
 
 permissions:
   contents: read
@@ -71,7 +71,8 @@ jobs:
     name: Testes Estáticos
     needs: set-environment
     uses: ./.github/workflows/tf_validate.yaml
-    secrets: inherit
+    secrets:
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
     with:
       environment: ${{ needs.set-environment.outputs.env_name }}
       is_pull_request: ${{ github.event_name == 'pull_request' }}
