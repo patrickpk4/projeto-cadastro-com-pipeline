@@ -98,6 +98,7 @@ jobs:
       needs.set-environment.outputs.env_name == 'production'
     uses: ./.github/workflows/tf_plan_prod.yaml
     secrets:
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
       TFVARS_PROD: ${{ secrets.TFVARS_PROD }}
       BUCKET_PROD: ${{ secrets.BUCKET_PROD }}
       KEY_PROD: ${{ secrets.KEY_PROD }}
