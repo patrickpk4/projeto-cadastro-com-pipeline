@@ -71,7 +71,8 @@ jobs:
     name: Testes Estáticos
     needs: set-environment
     uses: ./.github/workflows/tf_validate.yaml
-    secrets: inherit
+    secrets:
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
     with:
       environment: ${{ needs.set-environment.outputs.env_name }}
       is_pull_request: ${{ github.event_name == 'pull_request' }}
@@ -83,7 +84,11 @@ jobs:
     if: |
       needs.set-environment.outputs.env_name == 'staging'
     uses: ./.github/workflows/tf_plan_stag.yaml
-    secrets: inherit
+    secrets:
+      TFVARS: ${{ secrets.TFVARS }}
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
+      BUCKET: ${{ secrets.BUCKET }}
+      KEY: ${{ secrets.KEY }}
 
   # ── 3b. Plan Production ───────────────────────────────────────
   plan-production:
@@ -92,7 +97,11 @@ jobs:
     if: |
       needs.set-environment.outputs.env_name == 'production'
     uses: ./.github/workflows/tf_plan_prod.yaml
-    secrets: inherit
+    secrets:
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
+      TFVARS_PROD: ${{ secrets.TFVARS_PROD }}
+      BUCKET_PROD: ${{ secrets.BUCKET_PROD }}
+      KEY_PROD: ${{ secrets.KEY_PROD }}
 
   # ── 4a. Apply Staging (somente tag v*) ────────────────────────
   apply-staging:
@@ -102,7 +111,11 @@ jobs:
       needs.set-environment.outputs.is_deploy == 'true' &&
       needs.set-environment.outputs.env_name == 'staging'
     uses: ./.github/workflows/tf_apply_stag.yaml
-    secrets: inherit
+    secrets:
+      TFVARS: ${{ secrets.TFVARS }}
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
+      BUCKET: ${{ secrets.BUCKET }}
+      KEY: ${{ secrets.KEY }}
 
   # ── 4b. Apply Production (aguarda aprovação manual) ───────────
   apply-production:
@@ -112,4 +125,8 @@ jobs:
       needs.set-environment.outputs.is_deploy == 'true' &&
       needs.set-environment.outputs.env_name == 'production'
     uses: ./.github/workflows/tf_apply_prod.yaml
-    secrets: inherit
+    secrets:
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
+      TFVARS_PROD: ${{ secrets.TFVARS_PROD }}
+      BUCKET_PROD: ${{ secrets.BUCKET_PROD }}
+      KEY_PROD: ${{ secrets.KEY_PROD }}

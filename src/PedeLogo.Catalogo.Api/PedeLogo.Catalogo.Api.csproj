@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-      <TargetFramework>netcoreapp3.1</TargetFramework>
+      <TargetFramework>net8.0</TargetFramework>
       <UserSecretsId>9ba345b1-7ee7-4e12-99d5-925aed3bad75</UserSecretsId>
       <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
       <DockerfileContext>..\..</DockerfileContext>

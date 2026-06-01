@@ -2,6 +2,15 @@ name: Terraform Apply (staging)
 
 on:
   workflow_call:
+    secrets:
+      TFVARS:
+        required: true
+      AWS_ROLE:
+        required: true
+      BUCKET:
+        required: true
+      KEY:
+        required: true
 
 # ─────────────────────────────────────────────────────────────────
 # Apply Staging
@@ -34,14 +43,14 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ vars.REGION }}
-          role-to-assume: ${{ vars.AWS_ROLE }}
+          role-to-assume: ${{ secrets.AWS_ROLE }}
 
       - name: Terraform Init
         working-directory: ${{ vars.TF_DIR }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ vars.BUCKET }}" \
-            -backend-config="key=${{ vars.KEY }}" \
+            -backend-config="bucket=${{ secrets.BUCKET }}" \
+            -backend-config="key=${{ secrets.KEY }}" \
             -backend-config="region=${{ vars.REGION }}"
 
       - name: Baixar tfplan staging

@@ -60,7 +60,7 @@ namespace PedeLogo.Catalogo.UnitTests
             var resultado = ConfigManager.IsUnHealth();
 
             // Só valida que o método retorna bool sem exceção
-            resultado.Should().BeOneOf(true, false);
+            resultado.Should().BeFalse();
         }
 
         [Fact]

@@ -1,0 +1,91 @@
+name: dotnet-build
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["**/src/*.*"]
+
+  push:
+    branches:
+      - staging
+      - main
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+    paths-ignore:
+      - "infra/**/*.md"
+      - "src/**/*.md"
+      #- "**/*.yaml"
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+  id-token: write
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  # ETAPA 1 — Build e Testes
+  # Roda sempre: PR, push staging, push main, tag
+  # ────────────────────────────────────────────────────────────────
+  build:
+    name: Build e Testes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: Setup java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup .NET build
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore PedeLogo.Catalogo.sln
+
+      - name: instlar sonar-scanner
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+
+      - name: sonar begin
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${{ secrets.SONAR_PROJECT_KEY }}" \
+            /o:"${{ secrets.SONAR_ORGANIZATION }}" \
+            /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.cs.opencover.reportsPaths="./TestResults/**/coverage.opencover.xml"
+
+      - name: Build
+        run: dotnet build PedeLogo.Catalogo.sln --configuration Release --no-restore
+
+      - name: Testes Unitários
+        run: |
+          dotnet test tests/PedeLogo.Catalogo.UnitTests \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=unit-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: Sonar End
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: projeto-cadastro-com-pipeline/TestResults/*.trx

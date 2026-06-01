@@ -5,6 +5,12 @@ on:
     secrets:
       TFVARS_PROD:
         required: true
+      AWS_ROLE:
+        required: true
+      BUCKET_PROD:
+        required: true
+      KEY_PROD:
+        required: true
 
 # ─────────────────────────────────────────────────────────────────
 # Plan Production
@@ -36,14 +42,14 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ vars.REGION }}
-          role-to-assume: ${{ vars.AWS_ROLE }}
+          role-to-assume: ${{ secrets.AWS_ROLE }}
 
       - name: Terraform Init
         working-directory: ${{ vars.TF_DIR_PROD }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ vars.BUCKET_PROD }}" \
-            -backend-config="key=${{ vars.KEY_PROD }}" \
+            -backend-config="bucket=${{ secrets.BUCKET_PROD }}" \
+            -backend-config="key=${{ secrets.KEY_PROD }}" \
             -backend-config="region=${{ vars.REGION }}"
 
       - name: Terraform Plan
