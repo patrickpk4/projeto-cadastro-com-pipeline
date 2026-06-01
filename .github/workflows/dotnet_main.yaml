@@ -3,7 +3,7 @@ name: dotnet-build
 on:
   pull_request:
     branches: [main]
-    paths: ["**/src/production/*.*"]
+    paths: ["**/src/*.*"]
 
   push:
     branches:
