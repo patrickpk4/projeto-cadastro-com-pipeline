@@ -60,7 +60,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore
-        working-directory: src/PedeLogo.Catalogo.Api
+        working-directory: src/
         run: dotnet restore PedeLogo.Catalogo.sln
 
       - name: Debug pastas
