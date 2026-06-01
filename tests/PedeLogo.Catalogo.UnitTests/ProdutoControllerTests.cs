@@ -184,24 +184,27 @@ namespace PedeLogo.Catalogo.UnitTests
 
         // ─── Helpers ──────────────────────────────────────────────────────────
 
-        private static Mock<IAsyncCursor<Produto>> CriarCursorMock(List<Produto> produtos)
-        {
-            var cursorMock = new Mock<IAsyncCursor<Produto>>();
-            cursorMock.Setup(c => c.Current).Returns(produtos);
-            cursorMock
-                .SetupSequence(c => c.MoveNext(default))
-                .Returns(true)
-                .Returns(false);
-
-            var findFluentMock = new Mock<IFindFluent<Produto, Produto>>();
-            findFluentMock
-                .Setup(f => f.ToList(default))
-                .Returns(produtos);
-            findFluentMock
-                .Setup(f => f.FirstOrDefault(default))
-                .Returns(produtos.Count > 0 ? produtos[0] : null);
-
-            return cursorMock;
+        private Mock<IFindFluent<Produto, Produto>> CriarCursorMock(List<Produto> produtos)
+{
+        var cursorMock = new Mock<IAsyncCursor<Produto>>();
+        cursorMock.Setup(c => c.Current).Returns(produtos);
+        cursorMock.SetupSequence(c => c.MoveNext(It.IsAny<CancellationToken>()))
+                  .Returns(true)
+                  .Returns(false);
+        cursorMock.SetupSequence(c => c.MoveNextAsync(It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(true)
+                  .ReturnsAsync(false);
+   
+        var findFluentMock = new Mock<IFindFluent<Produto, Produto>>();
+        findFluentMock
+            .Setup(f => f.ToCursorAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cursorMock.Object);
+        findFluentMock
+            .Setup(f => f.ToCursor(It.IsAny<CancellationToken>()))
+            .Returns(cursorMock.Object);
+   
+        return findFluentMock;
+}          
         }
     }
 }
