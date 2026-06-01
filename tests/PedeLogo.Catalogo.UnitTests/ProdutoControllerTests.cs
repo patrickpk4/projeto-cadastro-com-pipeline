@@ -1,4 +1,6 @@
+cat > tests/PedeLogo.Catalogo.UnitTests/ProdutoControllerTests.cs << 'EOF'
 using System.Collections.Generic;
+using System.Threading;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -8,14 +10,9 @@ using MongoDB.Driver;
 using PedeLogo.Catalogo.Api.Controllers;
 using PedeLogo.Catalogo.Api.Model;
 using Xunit;
-using System.Threading;
 
 namespace PedeLogo.Catalogo.UnitTests
 {
-    /// <summary>
-    /// Testes unitários do ProdutoController.
-    /// O MongoDB é mockado — nenhum banco real é necessário.
-    /// </summary>
     public class ProdutoControllerTests
     {
         private readonly Mock<ILogger<ProdutoController>> _loggerMock;
@@ -36,8 +33,6 @@ namespace PedeLogo.Catalogo.UnitTests
             _controller = new ProdutoController(_loggerMock.Object, _dbMock.Object);
         }
 
-        // ─── GET ALL ──────────────────────────────────────────────────────────
-
         [Fact]
         [Trait("Category", "Unit")]
         public void Get_QuandoExistemProdutos_DeveRetornarLista()
@@ -50,7 +45,10 @@ namespace PedeLogo.Catalogo.UnitTests
 
             var cursorMock = CriarCursorMock(produtos);
             _collectionMock
-                .Setup(c => c.Find(It.IsAny<BsonDocument>(), null))
+                .Setup(c => c.FindSync(
+                    It.IsAny<FilterDefinition<Produto>>(),
+                    It.IsAny<FindOptions<Produto, Produto>>(),
+                    It.IsAny<CancellationToken>()))
                 .Returns(cursorMock.Object);
 
             var resultado = _controller.Get();
@@ -65,15 +63,16 @@ namespace PedeLogo.Catalogo.UnitTests
         {
             var cursorMock = CriarCursorMock(new List<Produto>());
             _collectionMock
-                .Setup(c => c.Find(It.IsAny<BsonDocument>(), null))
+                .Setup(c => c.FindSync(
+                    It.IsAny<FilterDefinition<Produto>>(),
+                    It.IsAny<FindOptions<Produto, Produto>>(),
+                    It.IsAny<CancellationToken>()))
                 .Returns(cursorMock.Object);
 
             var resultado = _controller.Get();
 
             resultado.Should().BeEmpty();
         }
-
-        // ─── GET BY ID ────────────────────────────────────────────────────────
 
         [Fact]
         [Trait("Category", "Unit")]
@@ -84,7 +83,10 @@ namespace PedeLogo.Catalogo.UnitTests
 
             var cursorMock = CriarCursorMock(new List<Produto> { produto });
             _collectionMock
-                .Setup(c => c.Find(It.IsAny<System.Linq.Expressions.Expression<System.Func<Produto, bool>>>(), null))
+                .Setup(c => c.FindSync(
+                    It.IsAny<FilterDefinition<Produto>>(),
+                    It.IsAny<FindOptions<Produto, Produto>>(),
+                    It.IsAny<CancellationToken>()))
                 .Returns(cursorMock.Object);
 
             var resultado = _controller.Get(id);
@@ -105,8 +107,6 @@ namespace PedeLogo.Catalogo.UnitTests
                .WithMessage("Erro ao converter.");
         }
 
-        // ─── POST ─────────────────────────────────────────────────────────────
-
         [Fact]
         [Trait("Category", "Unit")]
         public void Post_ComProdutoValido_DeveRetornarOk()
@@ -119,93 +119,4 @@ namespace PedeLogo.Catalogo.UnitTests
 
             var resultado = _controller.Post(produto);
 
-            resultado.Should().BeOfType<OkResult>();
-            _collectionMock.Verify(c => c.InsertOne(produto, null, default), Times.Once);
-        }
-
-        // ─── PUT ──────────────────────────────────────────────────────────────
-
-        [Fact]
-        [Trait("Category", "Unit")]
-        public void Put_ComIdInvalido_DeveLancarException()
-        {
-            var idInvalido = "nao-e-objectid";
-            var produto = new Produto { Nome = "Teste" };
-
-            var act = () => _controller.Put(idInvalido, produto);
-
-            act.Should().Throw<System.Exception>()
-               .WithMessage("Id errado");
-        }
-
-        [Fact]
-        [Trait("Category", "Unit")]
-        public void Put_ComIdValido_DeveChamarFindOneAndReplace()
-        {
-            var id = ObjectId.GenerateNewId().ToString();
-            var produto = new Produto { Id = id, Nome = "Pizza Atualizada", Preco = 45.00 };
-
-            _collectionMock
-                .Setup(c => c.FindOneAndReplace(
-                    It.IsAny<System.Linq.Expressions.Expression<System.Func<Produto, bool>>>(),
-                    produto,
-                    null,
-                    default))
-                .Returns(produto);
-
-            var act = () => _controller.Put(id, produto);
-
-            act.Should().NotThrow();
-            _collectionMock.Verify(c => c.FindOneAndReplace(
-                It.IsAny<System.Linq.Expressions.Expression<System.Func<Produto, bool>>>(),
-                produto,
-                null,
-                default), Times.Once);
-        }
-
-        // ─── DELETE ───────────────────────────────────────────────────────────
-
-        [Fact]
-        [Trait("Category", "Unit")]
-        public void Delete_ComIdValido_DeveChamarFindOneAndDelete()
-        {
-            var id = ObjectId.GenerateNewId().ToString();
-
-            _collectionMock
-                .Setup(c => c.FindOneAndDelete(
-                    It.IsAny<System.Linq.Expressions.Expression<System.Func<Produto, bool>>>(),
-                    null,
-                    default))
-                .Returns((Produto)null);
-
-            var act = () => _controller.Delete(id);
-
-            act.Should().NotThrow();
-        }
-
-        // ─── Helpers ──────────────────────────────────────────────────────────
-
-        private Mock<IFindFluent<Produto, Produto>> CriarCursorMock(List<Produto> produtos)
-    {
-        var cursorMock = new Mock<IAsyncCursor<Produto>>();
-        cursorMock.Setup(c => c.Current).Returns(produtos);
-        cursorMock.SetupSequence(c => c.MoveNext(It.IsAny<CancellationToken>()))
-                  .Returns(true)
-                  .Returns(false);
-        cursorMock.SetupSequence(c => c.MoveNextAsync(It.IsAny<CancellationToken>()))
-                  .ReturnsAsync(true)
-                  .ReturnsAsync(false);
-   
-        var findFluentMock = new Mock<IFindFluent<Produto, Produto>>();
-        findFluentMock
-            .Setup(f => f.ToCursorAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(cursorMock.Object);
-        findFluentMock
-            .Setup(f => f.ToCursor(It.IsAny<CancellationToken>()))
-            .Returns(cursorMock.Object);
-   
-        return findFluentMock;
-    }          
-  }
- }
-
+            res
