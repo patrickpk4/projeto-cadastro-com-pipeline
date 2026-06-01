@@ -60,7 +60,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore
-        working-directory: src/
+        working-directory: projeto-cadastro-com-pipeline/
         run: dotnet restore PedeLogo.Catalogo.sln
 
       - name: Debug pastas
@@ -95,7 +95,7 @@ jobs:
           pwd
 
       - name: Build
-        working-directory: src/PedeLogo.Catalogo.Api
+        working-directory: projeto-cadastro-com-pipeline/
         run: dotnet build PedeLogo.Catalogo.sln --configuration Release --no-restore
 
       - name: Testes Unitários
@@ -117,4 +117,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: src/PedeLogo.Catalogo.Api/TestResults/*.trx
+          path: projeto-cadastro-com-pipeline/TestResults/*.trx
