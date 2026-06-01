@@ -82,13 +82,9 @@ jobs:
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: Sonar End
-        run: dotnet sonarscanner end \
-          /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-          /k:"${{ secrets.SONAR_PROJECT_KEY }}" \
-          /o:"${{ secrets.SONAR_ORGANIZATION }}" \
-          /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
-          /d:sonar.host.url="https://sonarcloud.io" \
-          /d:sonar.cs.opencover.reportsPaths="./TestResults/**/coverage.opencover.xml
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
