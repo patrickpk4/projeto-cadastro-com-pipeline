@@ -54,6 +54,17 @@ jobs:
         working-directory: src/PedeLogo.Catalogo.Api
         run: dotnet restore
 
+      - name: Debug pastas
+        run: |
+          echo "=== PWD ==="
+          pwd
+          echo "=== SLN ==="
+          find . -name "*.sln"
+          echo "=== .sonarqube ==="
+          find . -name ".sonarqube" -type d 2>/dev/null || echo "Não encontrado"
+          echo "=== csproj ==="
+          find . -name "*.csproj"
+
       - name: instlar sonar-scanner
         run: |
           dotnet tool install --global dotnet-sonarscanner
