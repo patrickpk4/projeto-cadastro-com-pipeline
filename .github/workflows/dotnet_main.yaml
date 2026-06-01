@@ -39,15 +39,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
 
-      - name: Debug estrutura
-        run: |
-          echo "=== PWD ==="
-          pwd
-          echo "=== Arquivos na raiz ==="
-          ls -la
-          echo "=== SLN ==="
-          find . -name "*.sln"
-
       - name: Setup java
         uses: actions/setup-java@v4
         with:
@@ -62,17 +53,6 @@ jobs:
       - name: Restore
         run: dotnet restore PedeLogo.Catalogo.sln
 
-      - name: Debug pastas
-        run: |
-          echo "=== PWD ==="
-          pwd
-          echo "=== SLN ==="
-          find . -name "*.sln"
-          echo "=== .sonarqube ==="
-          find . -name ".sonarqube" -type d 2>/dev/null || echo "Não encontrado"
-          echo "=== csproj ==="
-          find . -name "*.csproj"
-
       - name: instlar sonar-scanner
         run: |
           dotnet tool install --global dotnet-sonarscanner
@@ -85,13 +65,6 @@ jobs:
             /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.cs.opencover.reportsPaths="./TestResults/**/coverage.opencover.xml"
-
-      - name: Verificar .sonarqube
-        run: |
-          echo "=== .sonarqube ==="
-          ls -la .sonarqube/
-          echo "=== PWD ==="
-          pwd
 
       - name: Build
         run: dotnet build PedeLogo.Catalogo.sln --configuration Release --no-restore
