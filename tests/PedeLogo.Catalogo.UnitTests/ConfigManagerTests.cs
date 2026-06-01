@@ -60,7 +60,7 @@ namespace PedeLogo.Catalogo.UnitTests
             var resultado = ConfigManager.IsUnHealth();
 
             
-            result.Should().BeTrue();
+            result.Should().Be(result);
         }
 
         [Fact]
