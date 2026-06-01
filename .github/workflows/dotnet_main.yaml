@@ -39,6 +39,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
 
+      - name: Debug estrutura
+        run: |
+          echo "=== PWD ==="
+          pwd
+          echo "=== Arquivos na raiz ==="
+          ls -la
+          echo "=== SLN ==="
+          find . -name "*.sln"
+
       - name: Setup java
         uses: actions/setup-java@v4
         with:
