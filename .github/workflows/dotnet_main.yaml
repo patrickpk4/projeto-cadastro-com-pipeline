@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   # ────────────────────────────────────────────────────────────────
-  # ETAPA 2 — Build e Testes
+  # ETAPA 1 — Build e Testes
   # Roda sempre: PR, push staging, push main, tag
   # ────────────────────────────────────────────────────────────────
   build:
@@ -49,14 +49,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
 
       - name: Restore
         working-directory: src/PedeLogo.Catalogo.Api
@@ -90,9 +82,13 @@ jobs:
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: Sonar End
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+        run: dotnet sonarscanner end \
+          /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+          /k:"${{ secrets.SONAR_PROJECT_KEY }}" \
+          /o:"${{ secrets.SONAR_ORGANIZATION }}" \
+          /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+          /d:sonar.host.url="https://sonarcloud.io" \
+          /d:sonar.cs.opencover.reportsPaths="./TestResults/**/coverage.opencover.xml
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
