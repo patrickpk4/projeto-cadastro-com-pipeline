@@ -204,7 +204,7 @@ namespace PedeLogo.Catalogo.UnitTests
             .Returns(cursorMock.Object);
    
         return findFluentMock;
-}          
-        }
+       }          
+     }
     }
-}
+} 
