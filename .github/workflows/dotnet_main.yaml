@@ -52,7 +52,7 @@ jobs:
 
       - name: Restore
         working-directory: src/PedeLogo.Catalogo.Api
-        run: dotnet restore
+        run: dotnet restore PedeLogo.Catalogo.sln
 
       - name: Debug pastas
         run: |
@@ -78,9 +78,16 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.cs.opencover.reportsPaths="./TestResults/**/coverage.opencover.xml"
 
+      - name: Verificar .sonarqube
+        run: |
+          echo "=== .sonarqube ==="
+          ls -la .sonarqube/
+          echo "=== PWD ==="
+          pwd
+
       - name: Build
         working-directory: src/PedeLogo.Catalogo.Api
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build PedeLogo.Catalogo.sln --configuration Release --no-restore
 
       - name: Testes Unitários
         run: |
