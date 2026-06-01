@@ -59,8 +59,8 @@ namespace PedeLogo.Catalogo.UnitTests
             // pode ser afetado por outros. Em produção, prefira injeção de dependência.
             var resultado = ConfigManager.IsUnHealth();
 
-            // Só valida que o método retorna bool sem exceção
-            resultado.Should().BeOfType<bool>();
+            
+            result.Should().BeTrue();
         }
 
         [Fact]

@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using PedeLogo.Catalogo.Api.Controllers;
 using PedeLogo.Catalogo.Api.Model;
 using Xunit;
+using System.Threading;
 
 namespace PedeLogo.Catalogo.UnitTests
 {
