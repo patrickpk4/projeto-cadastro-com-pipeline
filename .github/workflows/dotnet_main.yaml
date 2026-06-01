@@ -94,7 +94,6 @@ jobs:
           pwd
 
       - name: Build
-        working-directory: projeto-cadastro-com-pipeline/
         run: dotnet build PedeLogo.Catalogo.sln --configuration Release --no-restore
 
       - name: Testes Unitários
