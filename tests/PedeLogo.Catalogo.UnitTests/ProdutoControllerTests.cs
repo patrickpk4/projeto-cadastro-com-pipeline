@@ -185,7 +185,7 @@ namespace PedeLogo.Catalogo.UnitTests
         // ─── Helpers ──────────────────────────────────────────────────────────
 
         private Mock<IFindFluent<Produto, Produto>> CriarCursorMock(List<Produto> produtos)
-{
+    {
         var cursorMock = new Mock<IAsyncCursor<Produto>>();
         cursorMock.Setup(c => c.Current).Returns(produtos);
         cursorMock.SetupSequence(c => c.MoveNext(It.IsAny<CancellationToken>()))
@@ -204,7 +204,7 @@ namespace PedeLogo.Catalogo.UnitTests
             .Returns(cursorMock.Object);
    
         return findFluentMock;
-        }          
-    }
+    }          
+  }
+ }
 }
-
