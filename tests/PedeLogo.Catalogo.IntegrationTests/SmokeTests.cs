@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -23,14 +24,11 @@ namespace PedeLogo.Catalogo.IntegrationTests
                     builder.UseEnvironment("Testing");
                     builder.ConfigureServices(services =>
                     {
-                        var descriptor = services.SingleOrDefault(
-                            d => d.ServiceType == typeof(IMongoDatabase));
-                        if (descriptor != null)
-                            services.Remove(descriptor);
+                        var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMongoDatabase));
+                        if (descriptor != null) services.Remove(descriptor);
                         services.AddSingleton<IMongoDatabase>(mongo.Database);
                     });
                 });
-
             _client = factory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
@@ -68,7 +66,3 @@ namespace PedeLogo.Catalogo.IntegrationTests
         }
     }
 }
-'''
-with open('tests/PedeLogo.Catalogo.IntegrationTests/SmokeTests.cs', 'w') as f:
-    f.write(content)
-print("OK")

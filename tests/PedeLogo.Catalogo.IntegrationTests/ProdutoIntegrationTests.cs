@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
@@ -45,21 +46,17 @@ namespace PedeLogo.Catalogo.IntegrationTests
         public ProdutoIntegrationTests(MongoFixture mongo)
         {
             _collection = mongo.Database.GetCollection<Produto>("Produto");
-
             var factory = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>
                 {
                     builder.UseEnvironment("Testing");
                     builder.ConfigureServices(services =>
                     {
-                        var descriptor = services.SingleOrDefault(
-                            d => d.ServiceType == typeof(IMongoDatabase));
-                        if (descriptor != null)
-                            services.Remove(descriptor);
+                        var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMongoDatabase));
+                        if (descriptor != null) services.Remove(descriptor);
                         services.AddSingleton<IMongoDatabase>(mongo.Database);
                     });
                 });
-
             _client = factory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
@@ -71,7 +68,7 @@ namespace PedeLogo.Catalogo.IntegrationTests
             await _collection.DeleteManyAsync(new BsonDocument());
 
         private StringContent Json(object obj) =>
-            new StringContent(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json");
+            new StringContent(System.Text.Json.JsonSerializer.Serialize(obj), System.Text.Encoding.UTF8, "application/json");
 
         [Fact][Trait("Category", "Integration")]
         public async Task GetAll_QuandoExistemProdutos_DeveRetornar200ComLista()
@@ -85,8 +82,7 @@ namespace PedeLogo.Catalogo.IntegrationTests
             var response = await _client.GetAsync("/produto");
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             var json = await response.Content.ReadAsStringAsync();
-            var produtos = JsonSerializer.Deserialize<List<Produto>>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var produtos = System.Text.Json.JsonSerializer.Deserialize<List<Produto>>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             produtos.Should().HaveCountGreaterOrEqualTo(2);
         }
 
@@ -156,7 +152,3 @@ namespace PedeLogo.Catalogo.IntegrationTests
         }
     }
 }
-'''
-with open('tests/PedeLogo.Catalogo.IntegrationTests/ProdutoIntegrationTests.cs', 'w') as f:
-    f.write(content)
-print("OK")
