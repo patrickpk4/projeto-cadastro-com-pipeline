@@ -92,7 +92,6 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    
 
     services:
       mongodb:
