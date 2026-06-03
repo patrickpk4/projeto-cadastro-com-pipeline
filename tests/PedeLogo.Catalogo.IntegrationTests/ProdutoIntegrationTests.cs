@@ -9,7 +9,6 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Mongo2Go;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -26,9 +25,34 @@ namespace PedeLogo.Catalogo.IntegrationTests
 
         public MongoFixture()
         {
-            Runner = MongoDbRunner.Start();
+            // Configurar Mongo2Go para funcionar no GitHub Actions
+            var runnerOptions = new MongoDbRunnerOptions
+            {
+                UseSingleNodeReplicaSet = true,
+                MongoDbVersion = MongoDbVersion.V6_0,
+                LogOutput = Console.Out
+            };
+            
+            Runner = MongoDbRunner.Start(runnerOptions);
             var client = new MongoClient(Runner.ConnectionString);
             Database = client.GetDatabase("catalogo_test");
+            
+            // Aguardar o MongoDB ficar pronto
+            var maxAttempts = 10;
+            for (int i = 0; i < maxAttempts; i++)
+            {
+                try
+                {
+                    Database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1))
+                        .Wait(TimeSpan.FromSeconds(5));
+                    break;
+                }
+                catch
+                {
+                    if (i == maxAttempts - 1) throw;
+                    Task.Delay(1000).Wait();
+                }
+            }
         }
 
         public void Dispose()
@@ -46,10 +70,11 @@ namespace PedeLogo.Catalogo.IntegrationTests
             builder.UseEnvironment("Testing");
             builder.ConfigureServices(services =>
             {
-                // Remover o serviço IMongoDatabase existente
+                // Remover serviços existentes de MongoDB
                 for (int i = services.Count - 1; i >= 0; i--)
                 {
-                    if (services[i].ServiceType == typeof(IMongoDatabase))
+                    if (services[i].ServiceType == typeof(IMongoDatabase) ||
+                        services[i].ServiceType == typeof(IMongoClient))
                     {
                         services.RemoveAt(i);
                     }
