@@ -9,6 +9,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Mongo2Go;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -35,23 +36,21 @@ namespace PedeLogo.Catalogo.IntegrationTests
             {
                 try
                 {
-                    // Usar configuração padrão do Mongo2Go
                     Runner = MongoDbRunner.Start();
                     var client = new MongoClient(Runner.ConnectionString);
                     Database = client.GetDatabase("catalogo_test");
                     
-                    // Testar conexão
                     var pingTask = Database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1));
                     pingTask.Wait(TimeSpan.FromSeconds(10));
                     
-                    Console.WriteLine($"MongoDB conectado com sucesso: {Runner.ConnectionString}");
+                    Console.WriteLine($"MongoDB conectado: {Runner.ConnectionString}");
                     lastException = null;
                     break;
                 }
                 catch (Exception ex) when (i < maxRetries - 1)
                 {
                     lastException = ex;
-                    Console.WriteLine($"Tentativa {i + 1} falhou: {ex.Message}. Tentando novamente...");
+                    Console.WriteLine($"Tentativa {i + 1} falhou: {ex.Message}");
                     Runner?.Dispose();
                     Task.Delay(2000).Wait();
                 }
@@ -65,7 +64,7 @@ namespace PedeLogo.Catalogo.IntegrationTests
     }
 
     /// <summary>
-    /// Custom WebApplicationFactory para evitar problemas de cookie
+    /// Custom WebApplicationFactory
     /// </summary>
     public class CustomWebApplicationFactory : WebApplicationFactory<Startup>
     {
@@ -76,18 +75,33 @@ namespace PedeLogo.Catalogo.IntegrationTests
             builder.UseEnvironment("Testing");
             builder.ConfigureServices(services =>
             {
-                // Remover serviços problemáticos de cookie
+                // Remover handlers problemáticos
                 var cookieHandler = services.FirstOrDefault(d => d.ServiceType == typeof(Microsoft.AspNetCore.Mvc.Testing.Handlers.CookieContainerHandler));
                 if (cookieHandler != null)
+                {
                     services.Remove(cookieHandler);
+                }
 
                 // Substituir MongoDB se disponível
                 if (MongoDatabase != null)
                 {
-                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMongoDatabase));
-                    if (descriptor != null)
-                        services.Remove(descriptor);
+                    // Remover todas as referências ao IMongoDatabase existentes
+                    var descriptorsToRemove = new List<ServiceDescriptor>();
+                    foreach (var descriptor in services)
+                    {
+                        if (descriptor.ServiceType == typeof(IMongoDatabase) ||
+                            descriptor.ServiceType == typeof(IMongoClient))
+                        {
+                            descriptorsToRemove.Add(descriptor);
+                        }
+                    }
                     
+                    foreach (var descriptor in descriptorsToRemove)
+                    {
+                        services.Remove(descriptor);
+                    }
+                    
+                    // Adicionar nosso MongoDB de teste
                     services.AddSingleton<IMongoDatabase>(sp => MongoDatabase);
                 }
             });
@@ -95,7 +109,7 @@ namespace PedeLogo.Catalogo.IntegrationTests
     }
 
     /// <summary>
-    /// Testes de integração do ProdutoController.
+    /// Testes de integração
     /// </summary>
     public class ProdutoIntegrationTests : IClassFixture<MongoFixture>, IClassFixture<CustomWebApplicationFactory>, IDisposable
     {
@@ -110,11 +124,8 @@ namespace PedeLogo.Catalogo.IntegrationTests
                 
             _collection = mongo.Database.GetCollection<Produto>("Produto");
             
-            // Configurar factory com o MongoDB de teste
             factory.MongoDatabase = mongo.Database;
             _client = factory.CreateClient();
-            
-            // Limpar headers para evitar erros de cookie
             _client.DefaultRequestHeaders.Clear();
         }
 
