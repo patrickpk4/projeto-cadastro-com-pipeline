@@ -1,6 +1,3 @@
-Mesmo problema — falta o } para fechar o construtor. Vou reescrever via Python:
-bashpython3 - << 'PYEOF'
-content = '''using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
