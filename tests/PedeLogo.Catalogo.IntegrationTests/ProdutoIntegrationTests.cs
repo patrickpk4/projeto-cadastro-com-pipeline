@@ -18,26 +18,29 @@ using Xunit;
 
 namespace PedeLogo.Catalogo.IntegrationTests
 {
+    /// <summary>
+    /// Fixture que sobe um MongoDB em memória (Mongo2Go) compartilhado entre os testes.
+    /// </summary>
     public class MongoFixture : IDisposable
     {
-        public MongoDbRunner? Runner { get; }
+        public MongoDbRunner Runner { get; }
         public IMongoDatabase Database { get; }
 
         public MongoFixture()
         {
-            var connectionString = Environment.GetEnvironmentVariable("MONGODB_URI");
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                Runner = MongoDbRunner.Start();
-                connectionString = Runner.ConnectionString;
-            }
-            var client = new MongoClient(connectionString);
+            Runner = MongoDbRunner.Start();
+            var client = new MongoClient(Runner.ConnectionString);
             Database = client.GetDatabase("catalogo_test");
         }
 
-        public void Dispose() => Runner?.Dispose();
+        public void Dispose() => Runner.Dispose();
     }
 
+    /// <summary>
+    /// Testes de integração do ProdutoController.
+    /// Usa WebApplicationFactory + Mongo2Go (MongoDB em memória).
+    /// Nenhuma infra externa necessária.
+    /// </summary>
     public class ProdutoIntegrationTests : IClassFixture<MongoFixture>
     {
         private readonly HttpClient _client;
@@ -46,31 +49,34 @@ namespace PedeLogo.Catalogo.IntegrationTests
         public ProdutoIntegrationTests(MongoFixture mongo)
         {
             _collection = mongo.Database.GetCollection<Produto>("Produto");
+
             var factory = new WebApplicationFactory<Startup>()
                 .WithWebHostBuilder(builder =>
                 {
                     builder.UseEnvironment("Testing");
                     builder.ConfigureServices(services =>
                     {
-                        var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMongoDatabase));
-                        if (descriptor != null) services.Remove(descriptor);
+                        // Substitui o IMongoDatabase pelo banco em memória
                         services.AddSingleton<IMongoDatabase>(mongo.Database);
                     });
                 });
-            _client = factory.CreateClient(new WebApplicationFactoryClientOptions
-            {
-                AllowAutoRedirect = false,
-                HandleCookies = false
-            });
+
+            _client = factory.CreateClient();
         }
 
         private async Task LimparColecao() =>
             await _collection.DeleteManyAsync(new BsonDocument());
 
         private StringContent Json(object obj) =>
-            new StringContent(System.Text.Json.JsonSerializer.Serialize(obj), System.Text.Encoding.UTF8, "application/json");
+            new StringContent(
+                JsonSerializer.Serialize(obj),
+                Encoding.UTF8,
+                "application/json");
 
-        [Fact][Trait("Category", "Integration")]
+        // ─── GET ALL ──────────────────────────────────────────────────────────
+
+        [Fact]
+        [Trait("Category", "Integration")]
         public async Task GetAll_QuandoExistemProdutos_DeveRetornar200ComLista()
         {
             await LimparColecao();
@@ -79,75 +85,107 @@ namespace PedeLogo.Catalogo.IntegrationTests
                 new Produto { Id = ObjectId.GenerateNewId().ToString(), Nome = "Pizza", Preco = 39.90, Categoria = "Comida" },
                 new Produto { Id = ObjectId.GenerateNewId().ToString(), Nome = "Suco", Preco = 8.00, Categoria = "Bebida" }
             });
+
             var response = await _client.GetAsync("/produto");
+
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             var json = await response.Content.ReadAsStringAsync();
-            var produtos = System.Text.Json.JsonSerializer.Deserialize<List<Produto>>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var produtos = JsonSerializer.Deserialize<List<Produto>>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
             produtos.Should().HaveCountGreaterOrEqualTo(2);
         }
 
-        [Fact][Trait("Category", "Integration")]
+        [Fact]
+        [Trait("Category", "Integration")]
         public async Task GetAll_QuandoColecaoVazia_DeveRetornar200ComListaVazia()
         {
             await LimparColecao();
+
             var response = await _client.GetAsync("/produto");
+
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             var json = await response.Content.ReadAsStringAsync();
             json.Should().Be("[]");
         }
 
-        [Fact][Trait("Category", "Integration")]
+        // ─── GET BY ID ────────────────────────────────────────────────────────
+
+        [Fact]
+        [Trait("Category", "Integration")]
         public async Task GetById_ComIdExistente_DeveRetornar200()
         {
             await LimparColecao();
             var id = ObjectId.GenerateNewId().ToString();
             await _collection.InsertOneAsync(new Produto { Id = id, Nome = "Hamburguer", Preco = 28.00, Categoria = "Comida" });
+
             var response = await _client.GetAsync($"/produto/{id}");
+
             response.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
-        [Fact][Trait("Category", "Integration")]
+        [Fact]
+        [Trait("Category", "Integration")]
         public async Task GetById_ComIdInvalido_DeveRetornar500()
         {
             var response = await _client.GetAsync("/produto/id-invalido-aqui");
+
             response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         }
 
-        [Fact][Trait("Category", "Integration")]
+        // ─── POST ─────────────────────────────────────────────────────────────
+
+        [Fact]
+        [Trait("Category", "Integration")]
         public async Task Post_ComProdutoValido_DeveRetornar200EInserirNoBanco()
         {
             await LimparColecao();
             var produto = new { Nome = "Frango Grelhado", Preco = 32.00, Categoria = "Pratos" };
+
             var response = await _client.PostAsync("/produto", Json(produto));
+
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             var count = await _collection.CountDocumentsAsync(new BsonDocument());
             count.Should().Be(1);
         }
 
-        [Fact][Trait("Category", "Integration")]
+        // ─── DELETE ───────────────────────────────────────────────────────────
+
+        [Fact]
+        [Trait("Category", "Integration")]
         public async Task Delete_ComIdExistente_DeveRemoverDoBanco()
         {
             await LimparColecao();
             var id = ObjectId.GenerateNewId().ToString();
-            await _collection.InsertOneAsync(new Produto { Id = id, Nome = "Produto Temporario", Preco = 1.00 });
+            await _collection.InsertOneAsync(new Produto { Id = id, Nome = "Produto Temporário", Preco = 1.00 });
+
             await _client.DeleteAsync($"/produto?id={id}");
+
             var count = await _collection.CountDocumentsAsync(new BsonDocument());
             count.Should().Be(0);
         }
 
-        [Fact][Trait("Category", "Integration")]
+        // ─── HEALTH / CONFIG ──────────────────────────────────────────────────
+
+        [Fact]
+        [Trait("Category", "Integration")]
         public async Task UnHealth_QuandoChamado_DeveRetornar200EBloquearRequests()
         {
+            // Marca a aplicação como unhealthy
             var unhealth = await _client.PutAsync("/config/unhealth", null);
             unhealth.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // Próximas requisições devem retornar 503
             var response = await _client.GetAsync("/produto");
             response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         }
 
-        [Fact][Trait("Category", "Integration")]
+        [Fact]
+        [Trait("Category", "Integration")]
         public async Task UnreadFor_QuandoChamado_DeveRetornar200()
         {
             var response = await _client.PutAsync("/config/unreadfor/5", null);
+
             response.StatusCode.Should().Be(HttpStatusCode.OK);
         }
     }
