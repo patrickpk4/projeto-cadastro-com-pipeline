@@ -22,19 +22,28 @@ namespace PedeLogo.Catalogo.IntegrationTests
     /// Fixture que sobe um MongoDB em memória (Mongo2Go) compartilhado entre os testes.
     /// </summary>
     public class MongoFixture : IDisposable
-    {
-        public MongoDbRunner Runner { get; }
-        public IMongoDatabase Database { get; }
+{
+    public MongoDbRunner? Runner { get; }
+    public IMongoDatabase Database { get; }
 
-        public MongoFixture()
+    public MongoFixture()
+    {
+        // Se tiver MONGODB_URI definido (pipeline), usa ele
+        // Caso contrário sobe o Mongo2Go (local)
+        var connectionString = Environment.GetEnvironmentVariable("MONGODB_URI");
+
+        if (string.IsNullOrEmpty(connectionString))
         {
             Runner = MongoDbRunner.Start();
-            var client = new MongoClient(Runner.ConnectionString);
-            Database = client.GetDatabase("catalogo_test");
+            connectionString = Runner.ConnectionString;
         }
 
-        public void Dispose() => Runner.Dispose();
+        var client = new MongoClient(connectionString);
+        Database = client.GetDatabase("catalogo_test");
     }
+
+    public void Dispose() => Runner?.Dispose();
+}
 
     /// <summary>
     /// Testes de integração do ProdutoController.
