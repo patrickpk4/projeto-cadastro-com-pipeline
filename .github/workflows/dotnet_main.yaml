@@ -58,6 +58,8 @@ jobs:
           dotnet tool install --global dotnet-sonarscanner
 
       - name: sonar begin
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet sonarscanner begin \
             /k:"${{ secrets.SONAR_PROJECT_KEY }}" \

@@ -1,4 +1,4 @@
-using System.Net;
+content = '''using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -12,10 +12,6 @@ using Xunit;
 
 namespace PedeLogo.Catalogo.IntegrationTests
 {
-    /// <summary>
-    /// Smoke tests: verificam se a API sobe corretamente e responde nos endpoints principais.
-    /// Rodam após cada deploy para confirmar que a aplicação está viva.
-    /// </summary>
     public class SmokeTests : IClassFixture<MongoFixture>
     {
         private readonly HttpClient _client;
@@ -23,62 +19,57 @@ namespace PedeLogo.Catalogo.IntegrationTests
         public SmokeTests(MongoFixture mongo)
         {
             var factory = new WebApplicationFactory<Startup>()
-    .WithWebHostBuilder(builder =>
-    {
-        builder.UseEnvironment("Testing");
-        builder.ConfigureServices(services =>
-        {
-            //  Remove o registro existente do IMongoDatabase
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(IMongoDatabase));
-            if (descriptor != null)
-                services.Remove(descriptor);
+                .WithWebHostBuilder(builder =>
+                {
+                    builder.UseEnvironment("Testing");
+                    builder.ConfigureServices(services =>
+                    {
+                        var descriptor = services.SingleOrDefault(
+                            d => d.ServiceType == typeof(IMongoDatabase));
+                        if (descriptor != null)
+                            services.Remove(descriptor);
+                        services.AddSingleton<IMongoDatabase>(mongo.Database);
+                    });
+                });
 
-            //  Adiciona o banco de teste
-            services.AddSingleton<IMongoDatabase>(mongo.Database);
-        });
-    });
+            _client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false,
+                HandleCookies = false
+            });
+        }
 
-_client = factory.CreateClient(new WebApplicationFactoryClientOptions
-{
-    AllowAutoRedirect = false,
-    HandleCookies = false    // ← resolve o FormatException do Prometheus
-});
-        [Fact]
-        [Trait("Category", "Smoke")]
+        [Fact][Trait("Category", "Smoke")]
         public async Task Api_QuandoIniciada_DeveResponderNaRotaProduto()
         {
             var response = await _client.GetAsync("/produto");
-
             response.StatusCode.Should().NotBe(HttpStatusCode.ServiceUnavailable);
             response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError);
         }
 
-        [Fact]
-        [Trait("Category", "Smoke")]
+        [Fact][Trait("Category", "Smoke")]
         public async Task Api_QuandoIniciada_DeveRetornarContentTypeJson()
         {
             var response = await _client.GetAsync("/produto");
-
             response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
         }
 
-        [Fact]
-        [Trait("Category", "Smoke")]
+        [Fact][Trait("Category", "Smoke")]
         public async Task Config_RotaUnreadFor_DeveEstarAcessivel()
         {
             var response = await _client.PutAsync("/config/unreadfor/1", null);
-
             response.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
-        [Fact]
-        [Trait("Category", "Smoke")]
+        [Fact][Trait("Category", "Smoke")]
         public async Task Api_RotaInexistente_DeveRetornar404()
         {
             var response = await _client.GetAsync("/rota-que-nao-existe");
-
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
     }
 }
+'''
+with open('tests/PedeLogo.Catalogo.IntegrationTests/SmokeTests.cs', 'w') as f:
+    f.write(content)
+print("OK")
