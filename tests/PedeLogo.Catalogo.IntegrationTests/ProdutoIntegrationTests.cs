@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -10,7 +9,6 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Mongo2Go;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -25,50 +23,42 @@ namespace PedeLogo.Catalogo.IntegrationTests
     /// </summary>
     public class MongoFixture : IDisposable
     {
-        public MongoDbRunner Runner { get; private set; }
-        public IMongoDatabase Database { get; private set; }
+        public MongoDbRunner? Runner { get; private set; }
+        public IMongoDatabase? Database { get; private set; }
 
         public MongoFixture()
         {
             var maxRetries = 3;
-            Exception lastException = null;
+            Exception? lastException = null;
 
             for (int i = 0; i < maxRetries; i++)
             {
                 try
                 {
-                    // Configurar Mongo2Go com opções específicas para Linux
-                    var options = new MongoDbOptions
-                    {
-                        AdditionalMongodArguments = "--bind_ip_all --nojournal",
-                        SingleNodeReplSet = true,
-                        MongoDbDirectory = null, // Usa o padrão
-                        Port = 27018 // Usar porta diferente para evitar conflitos
-                    };
-
-                    Runner = MongoDbRunner.Start(options);
+                    // Usar configuração padrão do Mongo2Go
+                    Runner = MongoDbRunner.Start();
                     var client = new MongoClient(Runner.ConnectionString);
                     Database = client.GetDatabase("catalogo_test");
                     
                     // Testar conexão
-                    var ping = Database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1))
-                        .Wait(TimeSpan.FromSeconds(10));
+                    var pingTask = Database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1));
+                    pingTask.Wait(TimeSpan.FromSeconds(10));
                     
-                    Console.WriteLine($"MongoDB conectado com sucesso na porta: {Runner.Port}");
+                    Console.WriteLine($"MongoDB conectado com sucesso: {Runner.ConnectionString}");
                     lastException = null;
                     break;
                 }
                 catch (Exception ex) when (i < maxRetries - 1)
                 {
                     lastException = ex;
-                    Console.WriteLine($"Tentativa {i + 1} falhou: {ex.Message}. Tentando novamente em 2 segundos...");
+                    Console.WriteLine($"Tentativa {i + 1} falhou: {ex.Message}. Tentando novamente...");
                     Runner?.Dispose();
                     Task.Delay(2000).Wait();
                 }
             }
 
             if (lastException != null)
-                throw new InvalidOperationException("Falha ao iniciar MongoDB após múltiplas tentativas", lastException);
+                throw new InvalidOperationException("Falha ao iniciar MongoDB", lastException);
         }
 
         public void Dispose() => Runner?.Dispose();
@@ -79,7 +69,7 @@ namespace PedeLogo.Catalogo.IntegrationTests
     /// </summary>
     public class CustomWebApplicationFactory : WebApplicationFactory<Startup>
     {
-        public IMongoDatabase MongoDatabase { get; set; }
+        public IMongoDatabase? MongoDatabase { get; set; }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -91,44 +81,40 @@ namespace PedeLogo.Catalogo.IntegrationTests
                 if (cookieHandler != null)
                     services.Remove(cookieHandler);
 
-                // Substituir MongoDB
-                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMongoDatabase));
-                if (descriptor != null)
-                    services.Remove(descriptor);
-                
-                services.AddSingleton<IMongoDatabase>(sp => MongoDatabase);
+                // Substituir MongoDB se disponível
+                if (MongoDatabase != null)
+                {
+                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMongoDatabase));
+                    if (descriptor != null)
+                        services.Remove(descriptor);
+                    
+                    services.AddSingleton<IMongoDatabase>(sp => MongoDatabase);
+                }
             });
-        }
-
-        protected override IHost CreateHost(IHostBuilder builder)
-        {
-            builder.UseEnvironment("Testing");
-            return base.CreateHost(builder);
         }
     }
 
     /// <summary>
     /// Testes de integração do ProdutoController.
-    /// Usa WebApplicationFactory + Mongo2Go (MongoDB em memória).
-    /// Nenhuma infra externa necessária.
     /// </summary>
     public class ProdutoIntegrationTests : IClassFixture<MongoFixture>, IClassFixture<CustomWebApplicationFactory>, IDisposable
     {
         private readonly HttpClient _client;
         private readonly IMongoCollection<Produto> _collection;
-        private readonly MongoFixture _mongoFixture;
         private bool _disposed;
 
         public ProdutoIntegrationTests(MongoFixture mongo, CustomWebApplicationFactory factory)
         {
-            _mongoFixture = mongo;
+            if (mongo.Database == null)
+                throw new InvalidOperationException("MongoDB não inicializado");
+                
             _collection = mongo.Database.GetCollection<Produto>("Produto");
             
-            // Configurar factory
+            // Configurar factory com o MongoDB de teste
             factory.MongoDatabase = mongo.Database;
             _client = factory.CreateClient();
             
-            // Limpar todos os headers para evitar erros de cookie
+            // Limpar headers para evitar erros de cookie
             _client.DefaultRequestHeaders.Clear();
         }
 
@@ -141,7 +127,6 @@ namespace PedeLogo.Catalogo.IntegrationTests
             catch (Exception ex)
             {
                 Console.WriteLine($"Erro ao limpar coleção: {ex.Message}");
-                throw;
             }
         }
 
@@ -150,8 +135,6 @@ namespace PedeLogo.Catalogo.IntegrationTests
                 JsonSerializer.Serialize(obj),
                 Encoding.UTF8,
                 "application/json");
-
-        // ─── GET ALL ──────────────────────────────────────────────────────────
 
         [Fact]
         [Trait("Category", "Integration")]
@@ -187,8 +170,6 @@ namespace PedeLogo.Catalogo.IntegrationTests
             json.Should().Be("[]");
         }
 
-        // ─── GET BY ID ────────────────────────────────────────────────────────
-
         [Fact]
         [Trait("Category", "Integration")]
         public async Task GetById_ComIdExistente_DeveRetornar200()
@@ -206,13 +187,9 @@ namespace PedeLogo.Catalogo.IntegrationTests
         [Trait("Category", "Integration")]
         public async Task GetById_ComIdInvalido_DeveRetornar400()
         {
-            // Mudando de 500 para 400, que é mais apropriado para ID inválido
             var response = await _client.GetAsync("/produto/id-invalido-aqui");
-
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
-
-        // ─── POST ─────────────────────────────────────────────────────────────
 
         [Fact]
         [Trait("Category", "Integration")]
@@ -227,8 +204,6 @@ namespace PedeLogo.Catalogo.IntegrationTests
             var count = await _collection.CountDocumentsAsync(new BsonDocument());
             count.Should().Be(1);
         }
-
-        // ─── DELETE ───────────────────────────────────────────────────────────
 
         [Fact]
         [Trait("Category", "Integration")]
@@ -245,17 +220,13 @@ namespace PedeLogo.Catalogo.IntegrationTests
             count.Should().Be(0);
         }
 
-        // ─── HEALTH / CONFIG ──────────────────────────────────────────────────
-
         [Fact]
         [Trait("Category", "Integration")]
         public async Task UnHealth_QuandoChamado_DeveRetornar200EBloquearRequests()
         {
-            // Marca a aplicação como unhealthy
             var unhealth = await _client.PutAsync("/config/unhealth", null);
             unhealth.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            // Próximas requisições devem retornar 503
             var response = await _client.GetAsync("/produto");
             response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         }
@@ -265,7 +236,6 @@ namespace PedeLogo.Catalogo.IntegrationTests
         public async Task UnreadFor_QuandoChamado_DeveRetornar200()
         {
             var response = await _client.PutAsync("/config/unreadfor/5", null);
-
             response.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
