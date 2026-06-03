@@ -60,19 +60,27 @@ namespace PedeLogo.Catalogo.IntegrationTests
             _collection = mongo.Database.GetCollection<Produto>("Produto");
 
             var factory = new WebApplicationFactory<Startup>()
-                .WithWebHostBuilder(builder =>
-                {
-                    builder.UseEnvironment("Testing");
-                    builder.ConfigureServices(services =>
-                    {
-                        // Substitui o IMongoDatabase pelo banco em memória
-                        services.AddSingleton<IMongoDatabase>(mongo.Database);
-                    });
-                });
+    .WithWebHostBuilder(builder =>
+    {
+        builder.UseEnvironment("Testing");
+        builder.ConfigureServices(services =>
+        {
+            //  Remove o registro existente do IMongoDatabase
+            var descriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(IMongoDatabase));
+            if (descriptor != null)
+                services.Remove(descriptor);
 
-            _client = factory.CreateClient();
-        }
+            //  Adiciona o banco de teste
+            services.AddSingleton<IMongoDatabase>(mongo.Database);
+        });
+    });
 
+_client = factory.CreateClient(new WebApplicationFactoryClientOptions
+{
+    AllowAutoRedirect = false,
+    HandleCookies = false    // ← resolve o FormatException do Prometheus
+});
         private async Task LimparColecao() =>
             await _collection.DeleteManyAsync(new BsonDocument());
 

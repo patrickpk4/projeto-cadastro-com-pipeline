@@ -23,18 +23,27 @@ namespace PedeLogo.Catalogo.IntegrationTests
         public SmokeTests(MongoFixture mongo)
         {
             var factory = new WebApplicationFactory<Startup>()
-                .WithWebHostBuilder(builder =>
-                {
-                    builder.UseEnvironment("Testing");
-                    builder.ConfigureServices(services =>
-                    {
-                        services.AddSingleton<IMongoDatabase>(mongo.Database);
-                    });
-                });
+    .WithWebHostBuilder(builder =>
+    {
+        builder.UseEnvironment("Testing");
+        builder.ConfigureServices(services =>
+        {
+            //  Remove o registro existente do IMongoDatabase
+            var descriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(IMongoDatabase));
+            if (descriptor != null)
+                services.Remove(descriptor);
 
-            _client = factory.CreateClient();
-        }
+            //  Adiciona o banco de teste
+            services.AddSingleton<IMongoDatabase>(mongo.Database);
+        });
+    });
 
+_client = factory.CreateClient(new WebApplicationFactoryClientOptions
+{
+    AllowAutoRedirect = false,
+    HandleCookies = false    // ← resolve o FormatException do Prometheus
+});
         [Fact]
         [Trait("Category", "Smoke")]
         public async Task Api_QuandoIniciada_DeveResponderNaRotaProduto()
