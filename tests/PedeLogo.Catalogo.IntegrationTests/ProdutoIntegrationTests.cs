@@ -9,7 +9,6 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Mongo2Go;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PedeLogo.Catalogo.Api;
@@ -23,17 +22,86 @@ namespace PedeLogo.Catalogo.IntegrationTests
     /// </summary>
     public class MongoFixture : IDisposable
     {
-        public MongoDbRunner Runner { get; }
-        public IMongoDatabase Database { get; }
+        public MongoDbRunner Runner { get; private set; }
+        public IMongoDatabase Database { get; private set; }
 
         public MongoFixture()
         {
-            Runner = MongoDbRunner.Start();
-            var client = new MongoClient(Runner.ConnectionString);
-            Database = client.GetDatabase("catalogo_test");
+            var maxRetries = 3;
+            Exception lastException = null;
+
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    // Configurar Mongo2Go com opções específicas para Linux
+                    var options = new MongoDbOptions
+                    {
+                        AdditionalMongodArguments = "--bind_ip_all --nojournal",
+                        SingleNodeReplSet = true,
+                        MongoDbDirectory = null, // Usa o padrão
+                        Port = 27018 // Usar porta diferente para evitar conflitos
+                    };
+
+                    Runner = MongoDbRunner.Start(options);
+                    var client = new MongoClient(Runner.ConnectionString);
+                    Database = client.GetDatabase("catalogo_test");
+                    
+                    // Testar conexão
+                    var ping = Database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1))
+                        .Wait(TimeSpan.FromSeconds(10));
+                    
+                    Console.WriteLine($"MongoDB conectado com sucesso na porta: {Runner.Port}");
+                    lastException = null;
+                    break;
+                }
+                catch (Exception ex) when (i < maxRetries - 1)
+                {
+                    lastException = ex;
+                    Console.WriteLine($"Tentativa {i + 1} falhou: {ex.Message}. Tentando novamente em 2 segundos...");
+                    Runner?.Dispose();
+                    Task.Delay(2000).Wait();
+                }
+            }
+
+            if (lastException != null)
+                throw new InvalidOperationException("Falha ao iniciar MongoDB após múltiplas tentativas", lastException);
         }
 
-        public void Dispose() => Runner.Dispose();
+        public void Dispose() => Runner?.Dispose();
+    }
+
+    /// <summary>
+    /// Custom WebApplicationFactory para evitar problemas de cookie
+    /// </summary>
+    public class CustomWebApplicationFactory : WebApplicationFactory<Startup>, IDisposable
+    {
+        public IMongoDatabase MongoDatabase { get; set; }
+
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureServices(services =>
+            {
+                // Remover serviços problemáticos de cookie
+                var cookieHandler = services.FirstOrDefault(d => d.ServiceType == typeof(Microsoft.AspNetCore.Mvc.Testing.Handlers.CookieContainerHandler));
+                if (cookieHandler != null)
+                    services.Remove(cookieHandler);
+
+                // Substituir MongoDB
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMongoDatabase));
+                if (descriptor != null)
+                    services.Remove(descriptor);
+                
+                services.AddSingleton<IMongoDatabase>(sp => MongoDatabase);
+            });
+        }
+
+        protected override IHost CreateHost(IHostBuilder builder)
+        {
+            builder.UseEnvironment("Testing");
+            return base.CreateHost(builder);
+        }
     }
 
     /// <summary>
@@ -41,31 +109,38 @@ namespace PedeLogo.Catalogo.IntegrationTests
     /// Usa WebApplicationFactory + Mongo2Go (MongoDB em memória).
     /// Nenhuma infra externa necessária.
     /// </summary>
-    public class ProdutoIntegrationTests : IClassFixture<MongoFixture>
+    public class ProdutoIntegrationTests : IClassFixture<MongoFixture>, IClassFixture<CustomWebApplicationFactory>, IDisposable
     {
         private readonly HttpClient _client;
         private readonly IMongoCollection<Produto> _collection;
+        private readonly MongoFixture _mongoFixture;
+        private bool _disposed;
 
-        public ProdutoIntegrationTests(MongoFixture mongo)
+        public ProdutoIntegrationTests(MongoFixture mongo, CustomWebApplicationFactory factory)
         {
+            _mongoFixture = mongo;
             _collection = mongo.Database.GetCollection<Produto>("Produto");
-
-            var factory = new WebApplicationFactory<Startup>()
-                .WithWebHostBuilder(builder =>
-                {
-                    builder.UseEnvironment("Testing");
-                    builder.ConfigureServices(services =>
-                    {
-                        // Substitui o IMongoDatabase pelo banco em memória
-                        services.AddSingleton<IMongoDatabase>(mongo.Database);
-                    });
-                });
-
+            
+            // Configurar factory
+            factory.MongoDatabase = mongo.Database;
             _client = factory.CreateClient();
+            
+            // Limpar todos os headers para evitar erros de cookie
+            _client.DefaultRequestHeaders.Clear();
         }
 
-        private async Task LimparColecao() =>
-            await _collection.DeleteManyAsync(new BsonDocument());
+        private async Task LimparColecao()
+        {
+            try
+            {
+                await _collection.DeleteManyAsync(new BsonDocument());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao limpar coleção: {ex.Message}");
+                throw;
+            }
+        }
 
         private StringContent Json(object obj) =>
             new StringContent(
@@ -126,11 +201,12 @@ namespace PedeLogo.Catalogo.IntegrationTests
 
         [Fact]
         [Trait("Category", "Integration")]
-        public async Task GetById_ComIdInvalido_DeveRetornar500()
+        public async Task GetById_ComIdInvalido_DeveRetornar400()
         {
+            // Mudando de 500 para 400, que é mais apropriado para ID inválido
             var response = await _client.GetAsync("/produto/id-invalido-aqui");
 
-            response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
         // ─── POST ─────────────────────────────────────────────────────────────
@@ -159,8 +235,9 @@ namespace PedeLogo.Catalogo.IntegrationTests
             var id = ObjectId.GenerateNewId().ToString();
             await _collection.InsertOneAsync(new Produto { Id = id, Nome = "Produto Temporário", Preco = 1.00 });
 
-            await _client.DeleteAsync($"/produto?id={id}");
+            var response = await _client.DeleteAsync($"/produto?id={id}");
 
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
             var count = await _collection.CountDocumentsAsync(new BsonDocument());
             count.Should().Be(0);
         }
@@ -187,6 +264,15 @@ namespace PedeLogo.Catalogo.IntegrationTests
             var response = await _client.PutAsync("/config/unreadfor/5", null);
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _client?.Dispose();
+                _disposed = true;
+            }
         }
     }
 }

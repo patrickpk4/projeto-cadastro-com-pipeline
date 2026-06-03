@@ -5,7 +5,6 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Mongo2Go;
 using MongoDB.Driver;
 using PedeLogo.Catalogo.Api;
 using Xunit;
@@ -16,23 +15,18 @@ namespace PedeLogo.Catalogo.IntegrationTests
     /// Smoke tests: verificam se a API sobe corretamente e responde nos endpoints principais.
     /// Rodam após cada deploy para confirmar que a aplicação está viva.
     /// </summary>
-    public class SmokeTests : IClassFixture<MongoFixture>
+    public class SmokeTests : IClassFixture<MongoFixture>, IClassFixture<CustomWebApplicationFactory>
     {
         private readonly HttpClient _client;
 
-        public SmokeTests(MongoFixture mongo)
+        public SmokeTests(MongoFixture mongo, CustomWebApplicationFactory factory)
         {
-            var factory = new WebApplicationFactory<Startup>()
-                .WithWebHostBuilder(builder =>
-                {
-                    builder.UseEnvironment("Testing");
-                    builder.ConfigureServices(services =>
-                    {
-                        services.AddSingleton<IMongoDatabase>(mongo.Database);
-                    });
-                });
-
+            // Configurar factory com o MongoDB de teste
+            factory.MongoDatabase = mongo.Database;
             _client = factory.CreateClient();
+            
+            // Limpar headers problemáticos
+            _client.DefaultRequestHeaders.Clear();
         }
 
         [Fact]
