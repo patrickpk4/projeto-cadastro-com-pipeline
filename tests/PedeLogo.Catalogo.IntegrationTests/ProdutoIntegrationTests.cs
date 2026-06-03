@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -9,6 +10,8 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Mongo2Go;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PedeLogo.Catalogo.Api;
@@ -74,7 +77,7 @@ namespace PedeLogo.Catalogo.IntegrationTests
     /// <summary>
     /// Custom WebApplicationFactory para evitar problemas de cookie
     /// </summary>
-    public class CustomWebApplicationFactory : WebApplicationFactory<Startup>, IDisposable
+    public class CustomWebApplicationFactory : WebApplicationFactory<Startup>
     {
         public IMongoDatabase MongoDatabase { get; set; }
 
