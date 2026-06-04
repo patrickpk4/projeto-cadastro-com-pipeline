@@ -144,7 +144,7 @@ jobs:
 
       - name: Upload de Imagem para Docker Hub
         run: |
-          docker build -t catalogo:latest -f src/Catalogo.Api/Dockerfile .
+          docker build -t catalogo:latest -f src/PedeLogo.Catalogo.Api/Dockerfile .
           docker tag catalogo:latest catalogo:${{ github.sha }}
           docker push catalogo:latest
           docker push catalogo:${{ github.sha }}
