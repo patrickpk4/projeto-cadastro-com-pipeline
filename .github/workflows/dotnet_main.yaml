@@ -149,8 +149,9 @@ jobs:
           password: ${{ secrets.DOCKER_token }}
 
       - name: Upload de Imagem para Docker Hub
-        run: |
-          docker build -t catalogo:latest -f PedeLogo.Catalogo.Api/Dockerfile .
-          docker tag catalogo:latest catalogo:${{ github.sha }}
-          docker push catalogo:latest
-          docker push catalogo:${{ github.sha }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./src/PedeLogo.Catalogo.Api/Dockerfile
+          push: true
+          tags: ${{ secrets.docker_user }}/catalogo:latest
