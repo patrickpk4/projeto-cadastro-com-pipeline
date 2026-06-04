@@ -79,17 +79,42 @@ jobs:
             --results-directory ./TestResults \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
-      - name: Testes de Integração
-        run: |
-          dotnet test tests/PedeLogo.Catalogo.IntegrationTests \
-            --configuration Release \
-            --no-build \
-            --logger "trx;LogFileName=integration-results.trx" \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
-
       - name: Sonar End
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+  tests_integration:
+    name: Testes de Integração
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: mongodb:latest
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: mongouser
+          MONGO_INITDB_ROOT_PASSWORD: mongopassword
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: Setup .NET build
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Testes de Integração
+        run: |
+          dotnet test --enviroment mongodb://mongouser:mongopassword@localhost:27017 --configuration Release --no-build
