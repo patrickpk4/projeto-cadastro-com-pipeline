@@ -116,7 +116,7 @@ jobs:
       - name: Testes de Integração
         run: |
           dotnet test tests/PedeLogo.Catalogo.IntegrationTests \
-          --enviroment "MONGO_CONNECTION_STRING=mongodb://mongouser:mongopassword@localhost:27017" 
+          --environment "MONGO_CONNECTION_STRING=mongodb://mongouser:mongopassword@localhost:27017" 
           --configuration Release \
           --no-build \
           --logger "trx;LogFileName=integration-results.trx" \
