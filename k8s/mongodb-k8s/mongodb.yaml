@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-statefulset
+  namespace: data-base
+spec:
+  serviceName: mongo-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      serviceAccountName: db-service-account
+      containers:
+        - name: mongodb-container
+          image: mongo:4.4.0
+          envFrom:
+            - secretRef:
+                name: mongodb-secret
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  mongo --eval "db.adminCommand('ping')" || exit 1
+            initialDelaySeconds: 30
+            failureThreshold: 5
+            periodSeconds: 5
+            timeoutSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 27017
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  mongo --eval "db.adminCommand('ping')" || exit 1
+            initialDelaySeconds: 10
+            failureThreshold: 5
+            periodSeconds: 5
+            timeoutSeconds: 10
+          resources:
+            requests:
+              memory: "180Mi"
+              cpu: "150m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          ports:
+            - containerPort: 27017
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 20
+              preference:
+                matchExpressions:
+                  - key: disktype
+                    operator: In
+                    values:
+                      - ssd
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: nfs-mongodb
+        resources:
+          requests:
+            storage: 1Gi
