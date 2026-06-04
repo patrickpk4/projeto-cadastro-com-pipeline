@@ -154,4 +154,4 @@ jobs:
           context: .
           file: ./src/PedeLogo.Catalogo.Api/Dockerfile
           push: true
-          tags: ${{ secrets.docker_user }}/catalogo:latest
+          tags: ${{ secrets.docker_user }}/catalogo:latest, ${{ secrets.docker_user }}/catalogo:${{ github.sha }}
