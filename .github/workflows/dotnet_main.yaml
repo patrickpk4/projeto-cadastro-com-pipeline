@@ -114,9 +114,10 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Testes de Integração
+        env:
+          MONGO_CONNECTION_STRING: "mongodb://mongouser:mongopassword@localhost:27017"
         run: |
           dotnet test tests/PedeLogo.Catalogo.IntegrationTests \
-          --environment "MONGO_CONNECTION_STRING=mongodb://mongouser:mongopassword@localhost:27017" 
           --configuration Release \
           --no-build \
           --logger "trx;LogFileName=integration-results.trx" \
