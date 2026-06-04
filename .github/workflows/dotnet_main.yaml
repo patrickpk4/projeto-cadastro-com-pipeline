@@ -89,7 +89,7 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      postgres:
+      mongodb:
         image: mongodb:4
         ports:
           - 27017:27017
