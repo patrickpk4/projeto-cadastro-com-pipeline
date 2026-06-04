@@ -115,11 +115,13 @@ jobs:
 
       - name: Testes de Integração
         env:
-          MONGO_CONNECTION_STRING: "mongodb://mongouser:mongopassword@localhost:27017"
+          MONGO_CONNECTION_STRING: ${{ secrets.MONGO_CONNECTION_STRING }}
         run: |
           dotnet test tests/PedeLogo.Catalogo.IntegrationTests \
           --configuration Release \
           --no-build \
+          --logger "console;verbosity=detailed" \
           --logger "trx;LogFileName=integration-results.trx" \
           --collect:"XPlat Code Coverage" \
           --results-directory ./TestResults \
+          --verbosity normal
