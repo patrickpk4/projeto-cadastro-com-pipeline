@@ -22,19 +22,47 @@ namespace PedeLogo.Catalogo.IntegrationTests
     /// Fixture que sobe um MongoDB em memória (Mongo2Go) compartilhado entre os testes.
     /// </summary>
     public class MongoFixture : IDisposable
+{
+    public IMongoDatabase Database { get; private set; }
+    private MongoClient _client;
+
+    public MongoFixture()
     {
-        public MongoDbRunner Runner { get; }
-        public IMongoDatabase Database { get; }
-
-        public MongoFixture()
+        var connectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") 
+                        ?? "mongodb://localhost:27017";
+        
+        Console.WriteLine($"Conectando ao MongoDB: {connectionString}");
+        
+        var settings = MongoClientSettings.FromConnectionString(connectionString);
+        settings.ServerSelectionTimeout = TimeSpan.FromSeconds(10);
+        
+        _client = new MongoClient(settings);
+        Database = _client.GetDatabase("catalogo_test");
+        
+        // Testar conexão
+        var maxAttempts = 10;
+        for (int i = 0; i < maxAttempts; i++)
         {
-            Runner = MongoDbRunner.Start();
-            var client = new MongoClient(Runner.ConnectionString);
-            Database = client.GetDatabase("catalogo_test");
+            try
+            {
+                Database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1))
+                    .Wait(TimeSpan.FromSeconds(5));
+                Console.WriteLine("MongoDB conectado com sucesso!");
+                return;
+            }
+            catch (Exception ex) when (i < maxAttempts - 1)
+            {
+                Console.WriteLine($"Tentativa {i + 1} falhou: {ex.Message}");
+                Task.Delay(2000).Wait();
+            }
         }
-
-        public void Dispose() => Runner.Dispose();
     }
+
+    public void Dispose()
+    {
+        _client?.Dispose();
+    }
+}
 
     /// <summary>
     /// Testes de integração do ProdutoController.
