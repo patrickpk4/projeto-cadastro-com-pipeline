@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-deployment
-  namespace: api-app
 spec:
   selector:
     matchLabels:
@@ -12,6 +11,12 @@ spec:
       labels:
         app: api
     spec:
+      replicas: 3
+      strsategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 1
+          maxSurge: 1
       serviceAccountName: catalogo-service-account
       initContainers:
         - name: connect-db
@@ -20,13 +25,13 @@ spec:
             - sh
             - -c
             - |
-              until nc -z mongo-service.data-base.svc.cluster.local 27017; do
+              until nc -z mongo-service.default.svc.cluster.local 27017; do
               echo "Aguardando conexão com o MongoDB...";
               sleep 3;
               done
       containers:
         - name: api-container
-          image: patrickpk4/catalogo:latest
+          image: patrickpk4/catalogo:image_tag
           resources:
             requests:
               memory: "128Mi"
@@ -35,7 +40,7 @@ spec:
               memory: "128Mi"
               cpu: "70m"
           ports:
-            - containerPort: 80
+            - containerPort: 8080
               name: http
             - containerPort: 443
               name: https
@@ -43,7 +48,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /read
-              port: 80
+              port: 8080
               scheme: HTTP
             periodSeconds: 5
             timeoutSeconds: 2
@@ -51,7 +56,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 80
+              port: 8080
               scheme: HTTP
             periodSeconds: 5
             timeoutSeconds: 2
@@ -62,34 +67,34 @@ spec:
           env:
             - name: mongo_user
               valueFrom:
-              secretKeyRef:
-                key: MONGO_INITDB_ROOT_USERNAME
-                name: catalogo-secret
+                secretKeyRef:
+                  key: MONGO_INITDB_ROOT_USERNAME
+                  name: catalogo-secret
             - name: mongo_password
               valueFrom:
-              secretKeyRef:
-                key: MONGO_INITDB_ROOT_PASSWORD
-                name: catalogo-secret
-      affinity:
-        podAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 20
-              podAffinityTerm:
-                labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values:
-                      - mongodb
-                topologyKey: kubernetes.io/hostname
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 10
-              podAffinityTerm:
-                labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values:
-                      - api
-                topologyKey: kubernetes.io/hostname
+                secretKeyRef:
+                  key: MONGO_INITDB_ROOT_PASSWORD
+                  name: catalogo-secret
+#      affinity:
+#        podAffinity:
+#          preferredDuringSchedulingIgnoredDuringExecution:
+#            - weight: 20
+#              podAffinityTerm:
+#                labelSelector:
+#                matchExpressions:
+#                  - key: app
+#                    operator: In
+#                    values:
+#                      - mongodb
+#                topologyKey: kubernetes.io/hostname
+#        podAntiAffinity:
+#          preferredDuringSchedulingIgnoredDuringExecution:
+#            - weight: 10
+#              podAffinityTerm:
+#                labelSelector:
+#                matchExpressions:
+#                  - key: app
+#                    operator: In
+#                    values:
+#                      - api
+#                topologyKey: kubernetes.io/hostname
