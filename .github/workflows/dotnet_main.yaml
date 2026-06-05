@@ -231,11 +231,11 @@ jobs:
       - name: Deploy EKS staging / production
         if: ${{steps.set-env.outputs.IS_DEPLOY == 'true'}}
         run: |
-          kubectl apply -f k8s/ -R --namespace= ${{ steps.set-env.outputs.ENV }}
+          kubectl apply -f k8s/ -R -n ${{ steps.set-env.outputs.ENV }}
           kubectl rollout status deployment/api-deployment --namespace= ${{ steps.set-env.outputs.ENV }} \
           --timeout=180s
 
       - name: rolback staging
         if: failure()
         run: |
-          kubectl rollout undo deployment/api-deployment --namespace= ${{ steps.set-env.outputs.ENV }}
+          kubectl rollout undo deployment/api-deployment -n ${{ steps.set-env.outputs.ENV }}
