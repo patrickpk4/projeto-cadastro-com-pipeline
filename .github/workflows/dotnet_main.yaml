@@ -206,7 +206,8 @@ jobs:
           aws-region: ${{ vars.REGION }}
 
       - name: nome do cluster condicional
-        run: if [[ "${{ steps.set-env.outputs.ENV }}" == "production" ]]; then
+        run: |
+          if [[ "${{ steps.set-env.outputs.ENV }}" == "production" ]]; then
           echo "CLUSTER_NM=${{ vars.CLUSTER_NAME_PROD }}" >> $GITHUB_ENV
           else
           echo "CLUSTER_NM=${{ vars.CLUSTER_NAME }}" >> $GITHUB_ENV
