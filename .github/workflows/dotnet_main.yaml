@@ -219,6 +219,12 @@ jobs:
             "s|latest|${{ github.sha }}|g" \
             k8s/cadastro-k8s/cadastro.yaml
 
+      - name: atualiza configmap
+        run: |
+          sed -i \
+            "s|def|${{ steps.set-env.outputs.ENV }}|g" \
+            k8s/cadastro-k8s/*.yaml
+
       - name: Deploy EKS staging / production
         if: ${{steps.set-env.outputs.IS_DEPLOY == 'true'}}
         run: |
