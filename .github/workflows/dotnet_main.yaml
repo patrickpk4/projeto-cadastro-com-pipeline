@@ -166,6 +166,12 @@ jobs:
     needs: docker_build_and_push
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -183,5 +189,5 @@ jobs:
 
       - name: Deploy EKS
         run: |
-          kubectl apply -f k8s/
+          kubectl apply -f k8s/ -R
           kubectl rollout status deployment/api-deployment
