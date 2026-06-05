@@ -232,7 +232,7 @@ jobs:
         if: ${{steps.set-env.outputs.IS_DEPLOY == 'true'}}
         run: |
           kubectl apply -f k8s/ -R -n ${{ steps.set-env.outputs.ENV }}
-          kubectl rollout status deployment/api-deployment --namespace= ${{ steps.set-env.outputs.ENV }} \
+          kubectl rollout status deployment/api-deployment -n ${{ steps.set-env.outputs.ENV }} \
           --timeout=180s
 
       - name: rolback staging
