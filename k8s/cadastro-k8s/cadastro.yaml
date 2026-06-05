@@ -3,6 +3,12 @@ kind: Deployment
 metadata:
   name: api-deployment
 spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: api
@@ -11,12 +17,6 @@ spec:
       labels:
         app: api
     spec:
-      replicas: 3
-      strsategy:
-        type: RollingUpdate
-        rollingUpdate:
-          maxUnavailable: 1
-          maxSurge: 1
       serviceAccountName: catalogo-service-account
       initContainers:
         - name: connect-db
@@ -31,7 +31,7 @@ spec:
               done
       containers:
         - name: api-container
-          image: patrickpk4/catalogo:image_tag
+          image: patrickpk4/catalogo:latest
           resources:
             requests:
               memory: "128Mi"

@@ -62,7 +62,7 @@ module "eks" {
       instance_types = var.instance_types
 
       min_size     = 2
-      max_size     = 4
+      max_size     = 6
       desired_size = 4
     }
   }
