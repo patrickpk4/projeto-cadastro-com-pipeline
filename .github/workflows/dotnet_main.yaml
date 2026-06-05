@@ -175,10 +175,13 @@ jobs:
       - name: kubeconfig
         run: aws eks update-kubeconfig --name ${{ vars.CLUSTER_NAME }} --region ${{ vars.REGION }}
 
-      - name: substituir imagem no deployment
+      - name: Atualizar imagem
         run: |
-          kubectl sed -i "s|latest|${{ github.sha }}|g" ./k8s/deployment.yaml
+          sed -i \
+            "s|latest|${{ github.sha }}|g" \
+            k8s/cadastro-k8s/cadastro.yaml
 
-      - name: rollout status
+      - name: Deploy EKS
         run: |
-          kubectl rollout status deployment/catalogo-api -n catalogo
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/api-deployment
