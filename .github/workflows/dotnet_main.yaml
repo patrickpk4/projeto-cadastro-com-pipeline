@@ -13,7 +13,7 @@ on:
       - "infra/**/*.*"
       - "k8s/**/*.*"
       - "src/**/*.md"
-      - "**/*.yaml"
+      #- "**/*.yaml"
 
 permissions:
   contents: read
@@ -173,9 +173,22 @@ jobs:
           aws-region: ${{ vars.REGION }}
 
       - name: kubeconfig
-        run: aws eks update-kubeconfig \
-          --name ${{ vars.CLUSTER_NAME }} \
-          --region ${{ vars.REGION }}
+        run: aws eks update-kubeconfig --name ${{ vars.CLUSTER_NAME }} --region ${{ vars.REGION }}
+
+      - name: create cred
+        run: |
+          aws eks create-access-entry \
+            --cluster-name ${{ vars.CLUSTER_NAME }} \
+            --principal-arn ${{ secrets.ARN_iam }} \
+            --region ${{ vars.REGION }}
+
+      - name: policy
+        run: |
+          aws eks associate-access-policy \
+            --cluster-name ${{ vars.CLUSTER_NAME }} \
+            --principal-arn ${{ secrets.ARN_iam }} \
+            --policy-arn ${{ secrets.arn_eks }} \
+            --access-scope type=cluster
 
       - name: substituir imagem no deployment
         run: |
