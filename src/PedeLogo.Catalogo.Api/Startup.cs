@@ -49,7 +49,7 @@ namespace PedeLogo.Catalogo.Api
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
                 {
-                    Version = "v1.0.0",
+                    Version = "v1",
                     Title = "API para cadastro de Produtos",
                     Description = "API para cadastro de Produtos"
                 });
