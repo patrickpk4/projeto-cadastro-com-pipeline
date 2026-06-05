@@ -205,8 +205,13 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ vars.REGION }}
 
+      - name: nome do cluster condicional
+        run: if ${{ steps.set-env.outputs.ENV }} == 'production' then \
+          echo "CLUSTER_NM=${{ vars.CLUSTER_NAME_PROD }}" >> $GITHUB_ENV else \
+          echo "CLUSTER_NM=${{ vars.CLUSTER_NAME }}" >> $GITHUB_ENV
+
       - name: kubeconfig
-        run: aws eks update-kubeconfig --name ${{ vars.CLUSTER_NAME }} --region ${{ vars.REGION }}
+        run: aws eks update-kubeconfig --name ${{ vars.CLUSTER_NM }} --region ${{ vars.REGION }}
 
       - name: Atualizar imagem
         run: |
