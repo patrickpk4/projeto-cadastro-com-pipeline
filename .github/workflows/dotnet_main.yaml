@@ -206,12 +206,14 @@ jobs:
           aws-region: ${{ vars.REGION }}
 
       - name: nome do cluster condicional
-        run: if ${{ steps.set-env.outputs.ENV }} == 'production' then \
-          echo "CLUSTER_NM=${{ vars.CLUSTER_NAME_PROD }}" >> $GITHUB_ENV else \
+        run: if [[ "${{ steps.set-env.outputs.ENV }}" == "production" ]]; then
+          echo "CLUSTER_NM=${{ vars.CLUSTER_NAME_PROD }}" >> $GITHUB_ENV
+          else
           echo "CLUSTER_NM=${{ vars.CLUSTER_NAME }}" >> $GITHUB_ENV
+          fi
 
       - name: kubeconfig
-        run: aws eks update-kubeconfig --name ${{ vars.CLUSTER_NM }} --region ${{ vars.REGION }}
+        run: aws eks update-kubeconfig --name $CLUSTER_NM --region ${{ vars.REGION }}
 
       - name: Atualizar imagem
         run: |
@@ -228,10 +230,11 @@ jobs:
       - name: Deploy EKS staging / production
         if: ${{steps.set-env.outputs.IS_DEPLOY == 'true'}}
         run: |
-          kubectl apply -f k8s/ -R --namespace= ${ { steps.set-env.outputs.env } }
-          kubectl rollout status deployment/api-deployment --namespace= ${ { steps.set-env.outputs.env } } --timeout=180s
+          kubectl apply -f k8s/ -R --namespace= ${{ steps.set-env.outputs.ENV }}
+          kubectl rollout status deployment/api-deployment --namespace= ${{ steps.set-env.outputs.ENV }} \
+          --timeout=180s
 
       - name: rolback staging
         if: failure()
         run: |
-          kubectl rollout undo deployment/api-deployment --namespace= ${ { steps.set-env.outputs.env } }
+          kubectl rollout undo deployment/api-deployment --namespace= ${{ steps.set-env.outputs.ENV }}
