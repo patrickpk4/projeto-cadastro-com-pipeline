@@ -222,20 +222,13 @@ jobs:
             "s|latest|${{ github.sha }}|g" \
             k8s/cadastro-k8s/cadastro.yaml
 
-      - name: atualiza configmap
-        run: |
-          sed -i \
-            "s|def|${{ steps.set-env.outputs.ENV }}|g" \
-            k8s/cadastro-k8s/*.yaml
-
       - name: Deploy EKS staging / production
         if: ${{steps.set-env.outputs.IS_DEPLOY == 'true'}}
         run: |
-          kubectl apply -f k8s/ -R -n ${{ steps.set-env.outputs.ENV }}
-          kubectl rollout status deployment/api-deployment -n ${{ steps.set-env.outputs.ENV }} \
-          --timeout=180s
+          kubectl apply -f k8s/ -R 
+          kubectl rollout status deployment/api-deployment --timeout=360s
 
       - name: rolback staging
         if: failure()
         run: |
-          kubectl rollout undo deployment/api-deployment -n ${{ steps.set-env.outputs.ENV }}
+          kubectl rollout undo deployment/api-deployment
