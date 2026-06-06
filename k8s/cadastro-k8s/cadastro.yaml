@@ -25,7 +25,7 @@ spec:
             - sh
             - -c
             - |
-              until nc -z mongo-service.def.svc.cluster.local 27017; do
+              until nc -z mongo-service.default.svc.cluster.local 27017; do
               echo "Aguardando conexão com o MongoDB...";
               sleep 3;
               done
