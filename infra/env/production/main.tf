@@ -41,6 +41,14 @@ module "eks" {
     kube-proxy = {}
     vpc-cni = {
       before_compute = true
+      configuration_values = jsonencode({
+        env = {
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1" # Ajuste conforme sua necessidade
+          # WARM_IP_TARGET = "5"         # Alternativa ou complemento ao WARM_PREFIX_TARGET
+          # MINIMUM_IP_TARGET = "10"     # Alternativa ou complemento ao WARM_PREFIX_TARGET
+        }
+      })
     }
   }
 
