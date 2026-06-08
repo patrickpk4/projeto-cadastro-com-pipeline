@@ -219,16 +219,16 @@ kubectl rollout restart deployment/api-deployment -n api-app
 
 ## Boas Práticas Implementadas
 
-✅ Multi-namespace para isolamento  
-✅ RBAC com princípio do menor privilégio  
-✅ Health checks completos  
-✅ Auto-scaling horizontal  
-✅ Persistência com NFS  
-✅ Network policies para segurança  
-✅ Resource limits definidos  
-✅ Secrets management adequado  
-✅ StatefulSet para banco de dados  
-✅ Probes para resiliência  
+ Multi-namespace para isolamento  
+ RBAC com princípio do menor privilégio  
+ Health checks completos  
+ Auto-scaling horizontal  
+ Persistência com NFS  
+ Network policies para segurança  
+ Resource limits definidos  
+ Secrets management adequado  
+ StatefulSet para banco de dados  
+ Probes para resiliência  
 
 ---
 
