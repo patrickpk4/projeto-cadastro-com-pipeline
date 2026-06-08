@@ -75,26 +75,26 @@ spec:
                 secretKeyRef:
                   key: MONGO_INITDB_ROOT_PASSWORD
                   name: catalogo-secret
-    affinity:
-      podAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 20
-            podAffinityTerm:
-              labelSelector:
-              matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                    - mongodb
-              topologyKey: kubernetes.io/hostname
-      podAntiAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 10
-            podAffinityTerm:
-              labelSelector:
-              matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                    - api
-              topologyKey: kubernetes.io/hostname
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 20
+              podAffinityTerm:
+                labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - mongodb
+                topologyKey: kubernetes.io/hostname
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 10
+              podAffinityTerm:
+                labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - api
+                topologyKey: kubernetes.io/hostname
