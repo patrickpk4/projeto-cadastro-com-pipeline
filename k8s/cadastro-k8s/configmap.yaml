@@ -3,6 +3,6 @@ kind: ConfigMap
 metadata:
   name: catalogo-config
 data:
-  Mongo__host: mongodb://mongo-service.default.svc.cluster.local:27017/cadastro
+  Mongo__host: mongo-service.default.svc.cluster.local:27017/cadastro
   Mongo__port: "27017"
   Mongo__DataBase: admin
