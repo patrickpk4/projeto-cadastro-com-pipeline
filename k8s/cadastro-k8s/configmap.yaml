@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalogo-config
+data:
+  Mongo__host: mongo-service.default.svc.cluster.local
+  Mongo__port: "27017"
+  Mongo__DataBase: admin

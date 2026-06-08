@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      serviceAccountName: catalogo-service-account
+      initContainers:
+        - name: connect-db
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z mongo-service.default.svc.cluster.local 27017; do
+              echo "Aguardando conexão com o MongoDB...";
+              sleep 3;
+              done
+      containers:
+        - name: api-container
+          image: patrickpk4/catalogo:latest
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "70m"
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 443
+              name: https
+          imagePullPolicy: Always
+          readinessProbe:
+            httpGet:
+              path: /read
+              port: 8080
+              scheme: HTTP
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTP
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 5
+          envFrom:
+            - configMapRef:
+                name: catalogo-config
+          env:
+            - name: mongo_user
+              valueFrom:
+                secretKeyRef:
+                  key: MONGO_INITDB_ROOT_USERNAME
+                  name: catalogo-secret
+            - name: mongo_password
+              valueFrom:
+                secretKeyRef:
+                  key: MONGO_INITDB_ROOT_PASSWORD
+                  name: catalogo-secret
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 20
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - mongodb
+                topologyKey: kubernetes.io/hostname
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 10
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - api
+                topologyKey: kubernetes.io/hostname

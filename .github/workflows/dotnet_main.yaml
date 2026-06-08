@@ -9,12 +9,11 @@ on:
     branches:
       - staging
       - main
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
     paths-ignore:
-      - "infra/**/*.md"
+      - "infra/**/*.*"
+      - "k8s/**/*.*"
       - "src/**/*.md"
-      #- "**/*.yaml"
+      - "**/*.yaml"
 
 permissions:
   contents: read
@@ -25,7 +24,7 @@ permissions:
 jobs:
   # ────────────────────────────────────────────────────────────────
   # ETAPA 1 — Build e Testes
-  # Roda sempre: PR, push staging, push main, tag
+  #
   # ────────────────────────────────────────────────────────────────
   build:
     name: Build e Testes
@@ -125,3 +124,111 @@ jobs:
           --collect:"XPlat Code Coverage" \
           --results-directory ./TestResults \
           --verbosity normal
+
+  ############################################################
+  # ETAPA 2 — Build e Push da Imagem Docker
+
+  ############################################################
+
+  docker_build_and_push:
+    name: Build e Push da Imagem Docker
+    runs-on: ubuntu-latest
+    needs: [build, tests_integration]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: docker login
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.docker_user }}
+          password: ${{ secrets.DOCKER_token }}
+
+      - name: Upload de Imagem para Docker Hub
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./src/PedeLogo.Catalogo.Api/Dockerfile
+          push: true
+          tags: ${{ secrets.docker_user }}/catalogo:latest, ${{ secrets.docker_user }}/catalogo:${{ github.sha }}
+
+  #################################################################
+  # ETAPA 3 — Publicação na was eks
+  #
+  #################################################################
+
+  eks_deploy:
+    name: Deploy na AWS EKS
+    runs-on: ubuntu-latest
+    needs: docker_build_and_push
+    outputs:
+      env_name: ${{ steps.set-env.outputs.ENV }}
+      is_deploy: ${{ steps.set-env.outputs.IS_DEPLOY }}
+
+    steps:
+      # resoove em qual ambiente estamos rodando
+      - name: Resolver ambiente pelo trigger
+        id: set-env
+        run: |
+          REF="${{ github.ref }}"
+          EVENT="${{ github.event_name }}"
+
+          if [[ "$REF" == refs/heads/staging ]]; then
+            echo "ENV=staging"     >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=true" >> $GITHUB_OUTPUT
+            
+          elif [[ "$REF" == refs/heads/main ]]; then
+            echo "ENV=production"  >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=true"  >> $GITHUB_OUTPUT
+            
+          elif [[ "$EVENT" == "pull_request" ]]; then
+            echo "ENV=staging"     >> $GITHUB_OUTPUT
+            echo "IS_DEPLOY=false" >> $GITHUB_OUTPUT
+
+          else
+            echo "Trigger não mapeado: REF=$REF EVENT=$EVENT"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ vars.REGION }}
+
+      - name: nome do cluster condicional
+        run: |
+          if [[ "${{ steps.set-env.outputs.ENV }}" == "production" ]]; then
+          echo "CLUSTER_NM=${{ vars.CLUSTER_NAME_PROD }}" >> $GITHUB_ENV
+          else
+          echo "CLUSTER_NM=${{ vars.CLUSTER_NAME }}" >> $GITHUB_ENV
+          fi
+
+      - name: kubeconfig
+        run: aws eks update-kubeconfig --name $CLUSTER_NM --region ${{ vars.REGION }}
+
+      - name: Atualizar imagem
+        run: |
+          sed -i \
+            "s|latest|${{ github.sha }}|g" \
+            k8s/cadastro-k8s/cadastro.yaml
+
+      - name: Deploy EKS staging / production
+        if: ${{steps.set-env.outputs.IS_DEPLOY == 'true'}}
+        run: |
+          kubectl apply -f k8s/ -R 
+          kubectl rollout status deployment/api-deployment --timeout=360s
+
+      - name: rolback staging
+        if: failure()
+        run: |
+          kubectl rollout undo deployment/api-deployment
