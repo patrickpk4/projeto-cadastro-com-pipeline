@@ -81,11 +81,11 @@ spec:
             - weight: 20
               podAffinityTerm:
                 labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values:
-                      - mongodb
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - mongodb
                 topologyKey: kubernetes.io/hostname
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
