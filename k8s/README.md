@@ -7,14 +7,8 @@ Uma aplicação completa de catálogo implementada em **Kubernetes** com **Mongo
 
 ## Arquitetura
 
-![Diagrama da Arquitetura](A_diagram_displays_the_architecture_of_a_Kubernete.png)
-
-A aplicação é dividida em dois namespaces:
-
 - **api-app**: Contém a API .NET Core, seus Secrets, ServiceAccount, Role, RoleBinding e HPA.
 - **data-base**: Contém o MongoDB como StatefulSet, seu Secret, Headless Service, Role, RoleBinding e HPA.
-
-A comunicação entre os namespaces é controlada por uma **NetworkPolicy**.
 
 ---
 
@@ -40,8 +34,8 @@ catalogo-kubernetes/
 │   ├── rolebinding-mongodb.yaml
 │   ├── hpa-mongodb.yaml
 │   └── networkpolicy-mongodb.yaml
-├── storage/
-│   └── storage-class-mongodb.yaml
+├
+│   
 └── README.md
 ```
 
@@ -218,17 +212,16 @@ kubectl rollout restart deployment/api-deployment -n api-app
 ---
 
 ## Boas Práticas Implementadas
-
-✅ Multi-namespace para isolamento  
-✅ RBAC com princípio do menor privilégio  
-✅ Health checks completos  
-✅ Auto-scaling horizontal  
-✅ Persistência com NFS  
-✅ Network policies para segurança  
-✅ Resource limits definidos  
-✅ Secrets management adequado  
-✅ StatefulSet para banco de dados  
-✅ Probes para resiliência  
+ 
+ RBAC com princípio do menor privilégio  
+ Health checks completos  
+ Auto-scaling horizontal  
+ Persistência com NFS  
+ Network policies para segurança  
+ Resource limits definidos  
+ Secrets management adequado  
+ StatefulSet para banco de dados  
+ Probes para resiliência  
 
 ---
 
