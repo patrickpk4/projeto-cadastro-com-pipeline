@@ -92,9 +92,9 @@ spec:
             - weight: 10
               podAffinityTerm:
                 labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values:
-                      - api
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - api
                 topologyKey: kubernetes.io/hostname
