@@ -30,6 +30,12 @@ jobs:
         run: terraform validate
 
       - name: Terraform fmt
-        run: terraform fmt -check            
+        run: terraform fmt -check    
+
+      - name: scan Linter
+        uses: devops-infra/action-tflint@v1.0.5
+        with:
+          dir_filter: modules
+            
 
               
