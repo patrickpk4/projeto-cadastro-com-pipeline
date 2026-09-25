@@ -110,9 +110,6 @@ jobs:
           path: ./infra/tfplan  
           retention-days: 2
       
-      - name: usar infra_cd para o deploy
-        uses: ./.github/workflows/infra_CD.yaml
-        secrets: inherit
 
 
          
