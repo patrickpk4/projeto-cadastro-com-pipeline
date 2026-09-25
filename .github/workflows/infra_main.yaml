@@ -81,7 +81,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE }}
-          aws-region: ${{ secrets.REGION }}      
+          aws-region: ${{ vars.REGION }}      
   
       - name: Terraform Init
         working-directory: ./infra
