@@ -112,8 +112,6 @@ jobs:
       
       - name: usar infra_cd para o deploy
         uses: ./.github/workflows/infra_CD.yaml
-        with:
-          environment: [ staging, production ] 
         secrets:
           tfvars: ${{ secrets.TF_VARS }}
           aws_role: ${{ secrets.AWS_ROLE }}
