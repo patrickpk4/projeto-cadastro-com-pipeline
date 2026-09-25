@@ -110,9 +110,10 @@ jobs:
           path: ./infra/tfplan  
           retention-days: 2
 
-uses: ./github/workflows/infra_CD.yaml
-with:
-  environment: staging    
+  uses: ./github/workflows/infra_CD.yaml
+  needs: Build_Plan
+  with:
+    environment: staging    
       
 
 
