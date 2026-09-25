@@ -109,11 +109,21 @@ jobs:
           name: tfplan-${{ github.sha }}
           path: ./infra/tfplan  
           retention-days: 2
-
-  uses: ./github/workflows/infra_CD.yaml
-  needs: Build_Plan
-  with:
-    environment: staging    
+  
+  Deploy_staging:
+    name: Deploy staging
+    needs: [Build_Plan]
+    uses: ./.github/workflows/infra_CD.yaml
+    with:
+      environment: staging
+    secrets:
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
+      BUCKET: ${{ secrets.BUCKET }}
+      KEY: ${{ secrets.KEY }}
+      TF_VARS: ${{ secrets.TF_VARS }}
+    vars:
+      TF_VERSION: ${{ vars.TF_VERSION }}
+      REGION: ${{ vars.REGION }}    
       
 
 
