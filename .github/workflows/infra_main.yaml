@@ -101,7 +101,7 @@ jobs:
           terraform plan out=tfplan:${github_sha} -var-file=$tfvars
 
       - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ github.sha }}    
           retention-days: 2
