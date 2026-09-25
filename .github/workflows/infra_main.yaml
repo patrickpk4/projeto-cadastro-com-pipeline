@@ -97,14 +97,16 @@ jobs:
         env:
           tfvars: ${{ secrets.TFVARS }}
         run: |
-          terraform plan out=tfplan:${github_sha} \
-          -var-file=$tfvars \
-          -chdir=./infra
+          echo "$TFVARS" > terraform.tfvars
+          terraform plan \
+          -var-file="terraform.tfvars" \
+          -out=tfplan \
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ github.sha }}    
+          name: tfplan-${{ github.sha }}
+          path: ./infra/tfplan  
           retention-days: 2
 
 
