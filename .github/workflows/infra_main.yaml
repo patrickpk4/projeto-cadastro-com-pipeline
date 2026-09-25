@@ -104,7 +104,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: tfplan-${{ github.sha }}    
-          retention-days: 1
+          retention-days: 2
 
 
          
