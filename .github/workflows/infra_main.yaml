@@ -11,7 +11,8 @@ on:
       - 'infra/**'  
 permissions:
   security-events: write      
-  actions: read    
+  actions: read  
+  id-token: write  
 jobs:
   terraform_test:
     name: Terraform Test
@@ -62,10 +63,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   Build_Plan: 
-  permissions:
-    id-token: write
     name: Build Plan
-    depends-on: [terraform_test, terraform_chekov]
+    needs: [terraform_test, terraform_chekov]
     environment: staging
     runs-on: ubuntu-latest
     steps:
