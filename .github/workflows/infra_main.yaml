@@ -9,6 +9,8 @@ on:
       - main
     paths:
       - 'infra/**'  
+permissions:
+  security-events: write      
       
 jobs:
   terraform:
@@ -39,7 +41,7 @@ jobs:
           directory: ./infra
           download_external_modules: true
           output_format: sarif
-          output_file_path: result.sarif 
+          output_file_path: ./infra/results.sarif
 
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v4
