@@ -111,16 +111,10 @@ jobs:
           retention-days: 2
   
   Deploy_staging:
-    name: Deploy staging
     needs: [Build_Plan]
     uses: ./.github/workflows/infra_CD.yaml
     with:
       environment: staging
-    secrets:
-      AWS_ROLE: ${{ secrets.AWS_ROLE }}
-      BUCKET: ${{ secrets.BUCKET }}
-      KEY: ${{ secrets.KEY }}
-      TF_VARS: ${{ secrets.TF_VARS }}
     
 
          
