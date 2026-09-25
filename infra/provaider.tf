@@ -14,7 +14,7 @@ terraform {
 
 terraform {
   backend "s3" {
-    bucket = "placeholder-bucket-terraform-state"
+    bucket = "backend-prod-013644997946-us-east-1-an"
   }
 }
 
