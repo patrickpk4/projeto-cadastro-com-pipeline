@@ -13,7 +13,7 @@ terraform {
 }
 
 terraform {
-  backend "s3" {bucket = "backend-013644997946-us-east-1-an"}
+  backend "s3" { bucket = "backend-013644997946-us-east-1-an" }
 }
 
 
