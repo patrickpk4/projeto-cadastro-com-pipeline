@@ -94,6 +94,7 @@ jobs:
       
           
       - name: Terraform Plan
+        working-directory: ./infra
         env:
           TFVARS: ${{ secrets.TFVARS }}
         run: |
@@ -101,6 +102,7 @@ jobs:
           terraform plan \
           -var-file="terraform.tfvars" \
           -out=tfplan \
+          -chdir=./infra \
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
