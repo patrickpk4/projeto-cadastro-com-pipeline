@@ -7,13 +7,15 @@ terraform {
     aws = {
 
       source  = "hashicorp/aws"
-      version = "~>6.42.0"
+      version = "~> 6.66.0"
     }
   }
 }
 
 terraform {
-  backend "s3" {bucket = "placeholder-bucket-terraform-state"}
+  backend "s3" {
+    bucket = "backend-terraform-aws"
+  }
 }
 
 
