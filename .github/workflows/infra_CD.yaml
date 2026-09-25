@@ -41,7 +41,7 @@ jobs:
       - name: download plan artifact
         uses: actions/download-artifact@v4
         with:
-          name: tfplan:-${{ github.sha }}
+          name: tfplan-${{ github.sha }}
 
       - name: Terraform Apply
         working-directory: ./infra
@@ -49,6 +49,6 @@ jobs:
           tfvars: ${{ secrets.TF_VARS }}
         run: |
           echo "${tfvars}" > terraform.tfvars
-          terraform apply tfplan:-${{ github.sha }} \
+          terraform apply tfplan-${{ github.sha }} \
           -var-file="terraform.tfvars" \
           -auto-approve
