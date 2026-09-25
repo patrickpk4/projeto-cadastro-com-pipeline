@@ -6,9 +6,62 @@ on:
       environment:
         description: 'Environment to deploy to'
         required: true
-        default: 
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
+        default: staging
+        type: string
+      vars:
+        description: 'Terraform variables'
+        required: true
+        type: string
+      secret:
+        description: 'Terraform secret'
+        required: true
+        type: string
+      region:
+        description: 'AWS region'
+        required: true
+        type: string  
+
+
+jobs:
+  deploy-staging:
+    name: Deploy to ${{ inputs.environment }}
+    needs: [Build_Plan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ vars.TF_VERSION }}
+          
+      - name: aws credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ vars.REGION }}
+
+      - name: Terraform Init
+        working-directory: ./infra
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.BUCKET }}" \
+            -backend-config="key=${{ secrets.KEY }}" \
+            -backend-config="region=${{ vars.REGION }}" \
+
+      
+      - name: download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan:-${{ github.sha }}
+
+      - name: Terraform Apply
+        working-directory: ./infra
+        env:
+          tfvars: ${{ secrets.TF_VARS }}
+        run: |
+          echo "${tfvars}" > terraform.tfvars
+          terraform apply tfplan:-${{ github.sha }} \
+          -var-file="terraform.tfvars" \
+          -auto-approve
