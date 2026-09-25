@@ -102,7 +102,6 @@ jobs:
           terraform plan \
           -var-file="terraform.tfvars" \
           -out=tfplan \
-          -chdir=./infra \
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
