@@ -98,7 +98,7 @@ jobs:
         env:
           tfvars: ${{ secrets.TFVARS }}
         run: |
-        terraform plan out=tfplan:${github_sha} -var-file=$tfvars
+          terraform plan out=tfplan:${github_sha} -var-file=$tfvars
 
 
          
