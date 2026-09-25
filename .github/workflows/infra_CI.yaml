@@ -114,11 +114,14 @@ jobs:
         uses: ./.github/workflows/infra_CD.yaml
         with:
           environment: [ staging, production ] 
-          secret: ${{ secrets.TF_VARS }}
-          secret: ${{ secrets.key }}
-          secret: ${{ secrets.bucket }}
-          region: ${{ vars.REGION }}
-          vars: ${{ vars.TF_VERSION }}
+          secrets:
+            tfvars: ${{ secrets.TF_VARS }}
+            aws_role: ${{ secrets.AWS_ROLE }}
+            bucket: ${{ secrets.BUCKET }}
+            key: ${{ secrets.KEY }}
+            region: ${{ vars.REGION }}
+          vars:
+            tf_version: ${{ vars.TF_VERSION }}
 
 
          

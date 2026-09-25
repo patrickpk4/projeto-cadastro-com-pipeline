@@ -8,18 +8,27 @@ on:
         required: true
         default: staging
         type: string
+      secrets:
+        tfvars:
+          description: 'Terraform variables'
+          required: true
+          type: string  
+        aws_role:
+          description: 'AWS Role to assume'
+          required: true
+        bucket:
+          description: 'S3 Bucket for Terraform state'
+          required: true
+        key:
+          description: 'S3 Key for Terraform state'
+        region:
+          description: 'AWS Region'
+          required: true
       vars:
-        description: 'Terraform variables'
-        required: true
-        type: string
-      secret:
-        description: 'Terraform secret'
-        required: true
-        type: string
-      region:
-        description: 'AWS region'
-        required: true
-        type: string  
+        tf_version:
+          description: 'Terraform version'
+          required: true 
+            
 
 
 jobs:
