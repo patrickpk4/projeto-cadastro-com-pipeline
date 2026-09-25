@@ -95,7 +95,10 @@ jobs:
           
       - name: Terraform Plan
         working-directory: ./infra
+        env:
+          tfvars: ${{ secrets.TF_VARS }}
         run: |
+          echo "${tfvars}" > terraform.tfvars
           terraform plan \
           -var-file="terraform.tfvars" \
           -out=tfplan \
