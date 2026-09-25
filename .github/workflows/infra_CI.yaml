@@ -112,14 +112,7 @@ jobs:
       
       - name: usar infra_cd para o deploy
         uses: ./.github/workflows/infra_CD.yaml
-        secrets:
-          tfvars: ${{ secrets.TF_VARS }}
-          aws_role: ${{ secrets.AWS_ROLE }}
-          bucket: ${{ secrets.BUCKET }}
-          key: ${{ secrets.KEY }}
-        vars:
-          tf_version: ${{ vars.TF_VERSION }}
-          region: ${{ vars.REGION }}
+        inherits: true
 
 
          
