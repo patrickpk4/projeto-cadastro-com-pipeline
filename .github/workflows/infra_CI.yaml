@@ -112,7 +112,7 @@ jobs:
       
       - name: usar infra_cd para o deploy
         uses: ./.github/workflows/infra_CD.yaml
-        inherits: true
+        secrets: inherit
 
 
          
