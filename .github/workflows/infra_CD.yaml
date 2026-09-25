@@ -24,8 +24,9 @@ on:
 
 jobs:
   deploy-staging:
-    name: Deploy to ${{ inputs.environment }}
+    name: Deploy staging
     needs: [Build_Plan]
+    environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

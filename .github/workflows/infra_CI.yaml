@@ -118,6 +118,7 @@ jobs:
           secret: ${{ secrets.key }}
           secret: ${{ secrets.bucket }}
           region: ${{ vars.REGION }}
+          vars: ${{ vars.TF_VERSION }}
 
 
          
