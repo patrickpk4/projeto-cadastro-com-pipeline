@@ -119,9 +119,9 @@ jobs:
             aws_role: ${{ secrets.AWS_ROLE }}
             bucket: ${{ secrets.BUCKET }}
             key: ${{ secrets.KEY }}
-            region: ${{ vars.REGION }}
           vars:
             tf_version: ${{ vars.TF_VERSION }}
+            region: ${{ vars.REGION }}
 
 
          

@@ -11,17 +11,18 @@ on:
       secrets:
         tfvars:
           required: true
+          type: string
         aws_role:
           required: true
         bucket:
           required: true
         key:
           required: true
-        region:
-          required: true
       vars:
         tf_version:
-          required: true   
+          required: true  
+        region:
+          required: true 
 
 
 jobs:
