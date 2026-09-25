@@ -109,6 +109,10 @@ jobs:
           name: tfplan-${{ github.sha }}
           path: ./infra/tfplan  
           retention-days: 2
+
+      - uses: ./github/workflows/infra_CD.yaml
+        with:
+          environment: staging    
       
 
 
