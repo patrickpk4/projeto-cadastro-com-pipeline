@@ -95,7 +95,7 @@ jobs:
           
       - name: Terraform Plan
         env:
-          tfvars: ${{ secrets.TFVARS }}
+          TFVARS: ${{ secrets.TFVARS }}
         run: |
           echo "$TFVARS" > terraform.tfvars
           terraform plan \
