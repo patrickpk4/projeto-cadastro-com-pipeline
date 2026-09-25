@@ -13,9 +13,7 @@ terraform {
 }
 
 terraform {
-  backend "s3" {
-    bucket = "placeholder-bucket-terraform-state"
-  }
+  backend "s3" {bucket = "placeholder-bucket-terraform-state"}
 }
 
 
