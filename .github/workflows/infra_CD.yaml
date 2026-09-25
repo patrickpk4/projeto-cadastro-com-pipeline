@@ -10,25 +10,18 @@ on:
         type: string
       secrets:
         tfvars:
-          description: 'Terraform variables'
           required: true
-          type: string  
         aws_role:
-          description: 'AWS Role to assume'
           required: true
         bucket:
-          description: 'S3 Bucket for Terraform state'
           required: true
         key:
-          description: 'S3 Key for Terraform state'
+          required: true
         region:
-          description: 'AWS Region'
           required: true
       vars:
         tf_version:
-          description: 'Terraform version'
-          required: true 
-            
+          required: true   
 
 
 jobs:
