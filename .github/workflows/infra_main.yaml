@@ -41,7 +41,7 @@ jobs:
           directory: ./infra
           download_external_modules: true
           output_format: sarif
-          output_file_path: ./infra/results.sarif
+          output_file_path: ./infra
 
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v4
