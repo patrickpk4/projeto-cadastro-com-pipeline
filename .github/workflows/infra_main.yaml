@@ -37,7 +37,7 @@ jobs:
 
       - name: Terraform fmt
         working-directory: ./infra
-        run: terraform fmt -check -recursive 
+        run: terraform fmt -check
   
   terraform_chekov:
     name: Terraform Checkov
@@ -87,9 +87,9 @@ jobs:
         working-directory: ./infra
         run: |
           terraform init \
-            -backend-config="bucket=${{ secrets.BUCKET_NAME }}" \
-            -backend-config="key=${{ secrets.BUCKET_KEY }}" \
-            -backend-config="region=${{ secrets.REGION }}" \
+            -backend-config="bucket=${{ secrets.BUCKET }}" \
+            -backend-config="key=${{ secrets.KEY }}" \
+            -backend-config="region=${{ vars.REGION }}" \
 
       
           
