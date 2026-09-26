@@ -115,6 +115,7 @@ jobs:
     uses: ./.github/workflows/infra_CD.yaml
     with:
       environment: staging
+    secrets: inherit  
     
 
          
