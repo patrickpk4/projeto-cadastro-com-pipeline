@@ -33,3 +33,10 @@ jobs:
           kubectl cluster-info
           kubectl get nodes -o wide
           kubectl get pods -A
+          kubectl get pods -n kube-system
+
+      - name: teste scheduler 
+        run: |
+          kubectl create deployment nginx-deploy \
+          --image=nginx:alpine \
+           --replicas=2       
