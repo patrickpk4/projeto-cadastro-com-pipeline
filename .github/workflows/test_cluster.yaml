@@ -39,4 +39,17 @@ jobs:
         run: |
           kubectl create deployment nginx-deploy \
           --image=nginx:alpine \
-           --replicas=2       
+          --replicas=2
+          kubectl wait \
+          --for=condition=Ready \
+          pod/nginx-deploy \
+          --timeout=120s
+          kubectl get pod nginx-deploy -o wide  
+
+      - name: teste de dns 
+        run: |
+          kubectl run dns-test \
+          --image=busybox:1.36 \
+          --restart=Never \
+          -- sleep 300    
+          kubectl exec dns-test -- nslookup kubernetes.default        
