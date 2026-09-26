@@ -66,7 +66,12 @@ jobs:
         with:
           path: ./testeEks
 
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          path: ./testeEks    
+
       - name: teste comunicação entre pods 
         run: |
-          kubectl apply -f ./.github/workflows/testeEks/nginx.yaml   
+          kubectl apply -f ./testeEks/nginx.yaml   
          
