@@ -42,7 +42,7 @@ jobs:
           --replicas=2
           kubectl wait \
           --for=condition=Ready \
-          - l app: nginx-deploy \
+          pod -l app=nginx-deploy \
           --timeout=120s
           kubectl get pod -l app=nginx-deploy -o wide  
 
