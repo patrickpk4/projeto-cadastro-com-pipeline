@@ -44,7 +44,11 @@ jobs:
           path: ./infra
 
       - name: Terraform Apply
-        working-directory: ./infra
-       
+        working-directory: ./infra     
         run: terraform apply -auto-approve tfplan 
+
+  Teste_Cluster:
+    needs: [deploy-staging]
+    uses: ./.github/workflows/test_cluster.yaml
+    
           
