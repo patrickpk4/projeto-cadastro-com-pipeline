@@ -61,6 +61,10 @@ jobs:
           --restart=Never \
           --rm -it \
           -- curl -I https://www.google.com
+      - name: checout
+        uses: actions/checkout@v4
+        with:
+          path: ./testeEks
 
       - name: teste comunicação entre pods 
         run: |
