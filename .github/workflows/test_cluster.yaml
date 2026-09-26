@@ -24,15 +24,12 @@ jobs:
           CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
           REGION: ${{ vars.REGION }}
         run: |
-          printf 'CLUSTER_NAME=%q\n' "$CLUSTER_NAME"
-          if [[ ! "$CLUSTER_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]]; then
-            echo "::error::CLUSTER_NAME contém caracteres inválidos"
-            exit 1
-          fi
           aws eks update-kubeconfig \
            --name "$CLUSTER_NAME" \
            --region "$REGION"
            
-      - name: Test Cluster
+      - name: Validar o cluster
         run: |
-          kubectl get nodes    
+          kubectl cluster-info
+          kubectl get nodes -o wide
+          kubectl get pods -A
