@@ -21,7 +21,7 @@ jobs:
       - name: configura kubeconfig
         run: |
           aws eks update-kubeconfig \
-           --name k8s-cluster \
+           --name ${{ vars.CLUSTER_NAME }} \
            --region ${{ vars.REGION }}
            
       - name: Test Cluster
