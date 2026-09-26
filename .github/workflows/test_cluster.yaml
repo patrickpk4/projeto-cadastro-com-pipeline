@@ -53,3 +53,16 @@ jobs:
           --restart=Never \
           -- sleep 300    
           kubectl exec dns-test -- nslookup kubernetes.default.svc.cluster.local        
+
+      - name: teste saida para internet 
+        run: |
+          kubectl run network-test \
+          --image=curlimages/curl \
+          --restart=Never \
+          --rm -it \
+          -- curl -I https://www.google.com
+
+      - name: teste comunicação entre pods 
+        run: |
+          kubectl apply -f ./.github/workflows/testeEks/nginx.yaml   
+         
