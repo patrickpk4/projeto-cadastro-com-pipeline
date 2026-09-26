@@ -14,7 +14,7 @@ jobs:
           aws-region: ${{ vars.REGION }}  
       - name: configura kubeconfig
         run: |
-          aws eks update-kubeconfig --name ${{ vars.kube_name }} \
+          aws eks update-kubeconfig --name ${{ vars.CLUSTER_NAME }} \
           --region ${{ vars.REGION }}  
       - name: Test Cluster
         run: |
