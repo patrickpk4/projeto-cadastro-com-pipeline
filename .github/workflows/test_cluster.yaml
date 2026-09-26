@@ -42,9 +42,9 @@ jobs:
           --replicas=2
           kubectl wait \
           --for=condition=Ready \
-          pod/nginx-deploy \
+          - l app: nginx-deploy \
           --timeout=120s
-          kubectl get pod nginx-deploy -o wide  
+          kubectl get pod -l app=nginx-deploy -o wide  
 
       - name: teste de dns 
         run: |
