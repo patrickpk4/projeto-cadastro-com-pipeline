@@ -1,7 +1,6 @@
 name: Infrastructure CI
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - feature/**
@@ -96,9 +95,9 @@ jobs:
       - name: Terraform Plan
         working-directory: ./infra
         env:
-          TFVARS: ${{ secrets.TFVARS }}
+          tfvars: ${{ secrets.TF_VARS }}
         run: |
-          echo "$TFVARS" > terraform.tfvars
+          echo "${tfvars}" > terraform.tfvars
           terraform plan \
           -var-file="terraform.tfvars" \
           -out=tfplan \
@@ -109,7 +108,14 @@ jobs:
           name: tfplan-${{ github.sha }}
           path: ./infra/tfplan  
           retention-days: 2
-
+  
+  Deploy_staging:
+    needs: [Build_Plan]
+    uses: ./.github/workflows/infra_CD.yaml
+    with:
+      environment: staging
+    secrets: inherit  
+    
 
          
 

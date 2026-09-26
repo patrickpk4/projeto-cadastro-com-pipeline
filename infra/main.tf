@@ -53,11 +53,11 @@ module "eks" {
   }
 
   # Optional
-  #endpoint_public_access  = false
-  endpoint_private_access = true
+  endpoint_public_access  = true
+  endpoint_private_access = false
 
   # Optional: Adds the current caller identity as an administrator via cluster access entry
-  enable_cluster_creator_admin_permissions = false
+  enable_cluster_creator_admin_permissions = true
 
 
   vpc_id     = module.vpc.vpc_id
