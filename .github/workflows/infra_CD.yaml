@@ -49,7 +49,6 @@ jobs:
 
   Teste_Cluster:
     needs: [deploy-staging]
-    environment: staging
     uses: ./.github/workflows/test_cluster.yaml
     with:
       environment: staging
