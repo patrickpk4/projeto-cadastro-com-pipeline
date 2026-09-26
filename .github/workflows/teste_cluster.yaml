@@ -1,1 +1,30 @@
+name: Test Cluster
 
+on:
+  workflow_call:
+
+jobs:
+  test-cluster:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ vars.TF_VERSION }}
+          
+      - name: aws credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ vars.REGION }}
+
+      - name: configura kubeconfig
+        run: |
+          aws eks update-kubeconfig --name ${{ vars.CLUSTER_NAME }} --region ${{ vars.REGION }}
+
+      - name: Test Cluster
+        run: |
+          kubectl get nodes    
