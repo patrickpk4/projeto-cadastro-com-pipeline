@@ -100,7 +100,7 @@ jobs:
       
           
       - name: Terraform Plan
-        working-directory: ./environment/staging
+        working-directory: ./enviroments/staging
         env:
           tfvars: ${{ secrets.TF_VARS }}
         run: |
@@ -113,11 +113,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-staging-${{ github.sha }}
-          path: ./environment/staging/tfplan  
+          path: ./enviroments/staging/tfplan  
           retention-days: 2
   
   Deploy_staging:
     needs: [Build_Plan]
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/enviroments/staging_CD.yaml
     with:
       environment: staging
