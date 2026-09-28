@@ -42,10 +42,11 @@ jobs:
         working-directory: ./infra     
         run: terraform apply -auto-approve tfplan 
 
-  #Teste_Cluster:
-  #  needs: [deploy-staging]
-  #  uses: ./.github/workflows/test_cluster.yaml
-  #  with:
-  #    environment: staging
-  #  secrets: inherit
+  Teste_Cluster:
+    needs: [deploy-staging]
+    uses: ./.github/workflows/test_cluster.yaml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit
   
