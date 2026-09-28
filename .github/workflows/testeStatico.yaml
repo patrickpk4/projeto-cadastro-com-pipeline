@@ -69,4 +69,5 @@ jobs:
     needs: [terraform_test, terraform_chekov]
     uses: ./github/workflows/infra_CI.yaml
     with:
-      secrets: inherit
+      environment: staging
+    secrets: inherit
