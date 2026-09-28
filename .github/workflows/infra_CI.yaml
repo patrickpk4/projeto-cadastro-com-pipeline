@@ -118,10 +118,7 @@ jobs:
   
   Deploy_staging:
     needs: [Build_Plan]
-    permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/enviroments/staging_CD.yaml
+    uses: ./.github/workflows/infra_CD.yaml
     with:
       environment: staging
     secrets: inherit  
