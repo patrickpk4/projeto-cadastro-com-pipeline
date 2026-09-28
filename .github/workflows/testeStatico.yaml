@@ -67,6 +67,7 @@ jobs:
 
   Build_plan:
     name: build plan stagin and production
+    needs: [terraform_chekov, terraform_test]
     uses: ./.github/workflows/infra_CI.yaml
     with:
       environmente: staging
