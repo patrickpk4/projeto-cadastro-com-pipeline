@@ -67,4 +67,4 @@ jobs:
 
     Build_plan::
       name: build plan stagin and production
-      uses: ./.github/workflows/infra_ci.yaml      
+      uses: ./.github/workflows/infra_CI.yaml
