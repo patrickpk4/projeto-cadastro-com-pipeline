@@ -65,11 +65,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   Build_plan:
-  name: Build Plan
-  needs: [terraform_test, terraform_chekov]
-  environment: [ staging, production ]
-  permissions:
-    contents: read
-    id-token: write
-  with:
-    secrets: inherit
+    name: Build Plan
+    needs: [terraform_test, terraform_chekov]
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./github/workflows/infra_CI.yaml
+    with:
+      secrets: inherit
