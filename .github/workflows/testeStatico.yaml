@@ -3,12 +3,12 @@ name: teste estatico
 on:
   push:
     branches:
-      - 'feature/**'
+      - feature/**
   pull_request:
     branches:
       - main
     paths:
-      - 'infra/**'   
+      - infra/**
 
 jobs:
   terraform_test:
