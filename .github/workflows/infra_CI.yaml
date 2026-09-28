@@ -98,12 +98,13 @@ jobs:
 
 
   
-  #Deploy_staging:
-  #  needs: [Plan_Staging]
-  #  uses: ./.github/workflows/infra_CD.yaml
-  #  with:
-  #    environment: staging
-  #  secrets: inherit  
+  Deploy_staging:
+    needs: [Plan_Staging]
+    uses: ./.github/workflows/infra_CD.yaml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit  
     
 
          
