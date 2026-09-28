@@ -3,7 +3,7 @@ name: Terraform CI
 on:
   workflow_call:
     inputs:
-      environmente:
+      environment:
         required: true
         type: string  
       
