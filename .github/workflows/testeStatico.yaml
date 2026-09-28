@@ -65,7 +65,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   Build_plan:
-    needs: [terraform_test, terraform_chekov]
     uses: ./.github/workflows/infra_CI.yaml
     secrets: inherit
     with:
