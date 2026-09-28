@@ -2,14 +2,15 @@ name: Terraform CI
 
 on:
   workflow_call:
-    inputs:
-      environment:
-        required: true
-        type: string  
+    
       
 
 jobs:
   Plan_Staging: 
+    permissions:
+      id-token: write
+      contents: read
+      environment: staging
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -53,12 +54,12 @@ jobs:
           path: ./infra/tfplan  
           retention-days: 2
   
-  Deploy_staging:
-    needs: [Plan_Staging]
-    uses: ./.github/workflows/infra_CD.yaml
-    with:
-      environment: staging
-    secrets: inherit  
+  #Deploy_staging:
+  #  needs: [Plan_Staging]
+  #  uses: ./.github/workflows/infra_CD.yaml
+  #  with:
+  #    environment: staging
+  #  secrets: inherit  
     
 
          

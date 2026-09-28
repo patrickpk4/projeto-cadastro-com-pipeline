@@ -70,9 +70,4 @@ jobs:
     name: build plan staging and production
     needs: [terraform_chekov, terraform_test]
     uses: ./.github/workflows/infra_CI.yaml
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      environment: staging
     secrets: inherit
