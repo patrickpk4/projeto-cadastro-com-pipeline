@@ -68,3 +68,4 @@ jobs:
     Build_plan:
       name: build plan stagin and production
       uses: ./.github/workflows/infra_CI.yaml
+    secrets: inherit
