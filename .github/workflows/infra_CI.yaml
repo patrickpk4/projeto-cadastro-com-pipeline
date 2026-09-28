@@ -6,6 +6,7 @@ on:
 
 jobs:
   Plan_Staging: 
+    environment: staging
     permissions:
       contents: read
       id-token: write
