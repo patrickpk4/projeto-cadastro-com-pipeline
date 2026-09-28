@@ -2,12 +2,7 @@ name: Infrastructure CD
 
 on:
   workflow_call:
-    inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        type: string 
-
+    
 
 jobs:
   deploy-staging:
@@ -40,7 +35,7 @@ jobs:
       - name: download plan artifact
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-${{ github.sha }}
+          name: tfplan-staging-${{ github.sha }}
           path: ./infra
 
       - name: Terraform Apply
@@ -50,7 +45,8 @@ jobs:
   Teste_Cluster:
     needs: [deploy-staging]
     uses: ./.github/workflows/test_cluster.yaml
-    with:
-      environment: staging
+    permissions:
+      id-token: write
+      contents: read
     secrets: inherit
   

@@ -1,70 +1,12 @@
-name: Infrastructure CI
+name: Terraform CI
 
 on:
-  push:
-    branches:
-      - feature/**
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'infra/**'  
-permissions:
-  security-events: write      
-  actions: read  
-  id-token: write  
+  workflow_call:
+    
+      
+
 jobs:
-  terraform_test:
-    name: Terraform Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-
-      - name: Terraform Init
-        working-directory: ./infra
-        run: terraform init -backend=false
-
-      - name: Terraform Validate
-        working-directory: ./infra
-        run: terraform validate 
-
-      - name: Terraform fmt
-        working-directory: ./infra
-        run: terraform fmt -check
-  
-  terraform_chekov:
-    name: Terraform Checkov
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Checkov action
-        id: checkov
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: ./infra
-          download_external_modules: true
-          soft_fail: true
-          output_format: sarif
-          output_file_path: results.sarif
-
-      - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: results.sarif
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  Build_Plan: 
-    name: Build Plan
-    needs: [terraform_test, terraform_chekov]
+  Plan_Staging: 
     environment: staging
     runs-on: ubuntu-latest
     steps:
@@ -105,15 +47,63 @@ jobs:
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ github.sha }}
+          name: tfplan-staging-${{ github.sha }}
           path: ./infra/tfplan  
           retention-days: 2
+
+  Plan_Production: 
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ vars.TF_VERSION }}
+
+      - name: aws credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ vars.REGION }}      
+  
+      - name: Terraform Init
+        working-directory: ./infra
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.BUCKET }}" \
+            -backend-config="key=${{ secrets.KEY }}" \
+            -backend-config="region=${{ vars.REGION }}" \
+
+      
+          
+      - name: Terraform Plan
+        working-directory: ./infra
+        env:
+          tfvars: ${{ secrets.TF_VARS }}
+        run: |
+          echo "${tfvars}" > terraform.tfvars
+          terraform plan \
+          -var-file="terraform.tfvars" \
+          -out=tfplan \
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-production-${{ github.sha }}
+          path: ./infra/tfplan  
+          retention-days: 2        
+
+
   
   Deploy_staging:
-    needs: [Build_Plan]
+    needs: [Plan_Staging]
     uses: ./.github/workflows/infra_CD.yaml
-    with:
-      environment: staging
+    permissions:
+      id-token: write
+      contents: read
     secrets: inherit  
     
 
