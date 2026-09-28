@@ -1,4 +1,4 @@
-name: Infrastructure CI
+name: enviroments/stagingstructure CI
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths:
-      - 'infra/**'   
+      - 'enviroments/staging/**'   
 jobs:
   terraform_test:
     permissions:
@@ -27,19 +27,23 @@ jobs:
           terraform_version: ${{ vars.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: ./infra
+        working-directory: ./enviroments/staging
         run: terraform init -backend=false
 
       - name: Terraform Validate
-        working-directory: ./infra
+        working-directory: ./enviroments/staging
         run: terraform validate 
 
       - name: Terraform fmt
-        working-directory: ./infra
+        working-directory: ./enviroments/staging
         run: terraform fmt -check
   
   terraform_chekov:
     name: Terraform Checkov
+    permissions:
+      contents: read
+      id-token: write
+    environment: staging
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -49,7 +53,7 @@ jobs:
         id: checkov
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: ./infra
+          directory: ./enviroments/staging
           download_external_modules: true
           soft_fail: true
           output_format: sarif
@@ -86,7 +90,7 @@ jobs:
           aws-region: ${{ vars.REGION }}      
   
       - name: Terraform Init
-        working-directory: ./environment/staging
+        working-directory: ./enviroments/staging
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.BUCKET }}" \
@@ -114,7 +118,7 @@ jobs:
   
   Deploy_staging:
     needs: [Build_Plan]
-    uses: ./.github/workflows/infra_CD.yaml
+    uses: ./.github/workflows/enviroments/staging_CD.yaml
     with:
       environment: staging
     secrets: inherit  
