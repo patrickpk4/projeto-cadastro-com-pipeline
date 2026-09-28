@@ -7,9 +7,6 @@ on:
 
 jobs:
   Plan_Staging: 
-    permissions:
-      id-token: write
-      contents: read
     environment: staging
     runs-on: ubuntu-latest
     steps:
