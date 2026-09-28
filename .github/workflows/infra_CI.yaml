@@ -66,7 +66,7 @@ jobs:
           retention-days: 2
   
   Deploy_staging:
-    needs: [Build_Plan]
+    needs: [Plan_Staging]
     uses: ./.github/workflows/infra_CD.yaml
     with:
       environment: staging
