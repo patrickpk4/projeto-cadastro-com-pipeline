@@ -36,7 +36,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: tfplan-staging-${{ github.sha }}
-          path: ./infra/tfplan 
+          path: ./infra
 
       - name: Terraform Apply
         working-directory: ./infra     
