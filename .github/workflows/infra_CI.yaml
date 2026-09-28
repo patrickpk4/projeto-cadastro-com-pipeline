@@ -2,14 +2,14 @@ name: Terraform CI
 
 on:
   workflow_call:
+    inputs:
+      environmente:
+        required: true
+        type: string  
       
 
 jobs:
   Plan_Staging: 
-    environment: staging
-    permissions:
-      contents: read
-      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
