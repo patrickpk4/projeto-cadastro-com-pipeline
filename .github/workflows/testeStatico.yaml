@@ -8,8 +8,8 @@ on:
     branches:
       - main
     paths:
-      - 'infra'   
-      
+      - 'infra/**'   
+
 jobs:
   terraform_test:
     name: Terraform Test
