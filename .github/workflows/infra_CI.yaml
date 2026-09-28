@@ -1,4 +1,4 @@
-name: enviroments/stagingstructure CI
+name: infrastructure CI
 
 on:
   push:
@@ -8,14 +8,13 @@ on:
     branches:
       - main
     paths:
-      - 'enviroments/staging/**'   
+      - 'infra'   
 jobs:
   terraform_test:
     permissions:
-      contents: read
-      id-token: write 
+      contents: read 
     name: Terraform Test
-    environment: staging  
+    environment: staging 
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -27,15 +26,15 @@ jobs:
           terraform_version: ${{ vars.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: ./enviroments/staging
+        working-directory: ./infra
         run: terraform init -backend=false
 
       - name: Terraform Validate
-        working-directory: ./enviroments/staging
+        working-directory: ./infra
         run: terraform validate 
 
       - name: Terraform fmt
-        working-directory: ./enviroments/staging
+        working-directory: ./infra
         run: terraform fmt -check
   
   terraform_chekov:
@@ -53,7 +52,7 @@ jobs:
         id: checkov
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: ./enviroments/staging
+          directory: ./infra
           download_external_modules: true
           soft_fail: true
           output_format: sarif
@@ -90,7 +89,7 @@ jobs:
           aws-region: ${{ vars.REGION }}      
   
       - name: Terraform Init
-        working-directory: ./enviroments/staging
+        working-directory: ./infra
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.BUCKET }}" \
@@ -100,7 +99,7 @@ jobs:
       
           
       - name: Terraform Plan
-        working-directory: ./enviroments/staging
+        working-directory: ./infra
         env:
           tfvars: ${{ secrets.TF_VARS }}
         run: |
@@ -113,7 +112,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-staging-${{ github.sha }}
-          path: ./enviroments/staging/tfplan  
+          path: ./infra/tfplan  
           retention-days: 2
   
   Deploy_staging:
