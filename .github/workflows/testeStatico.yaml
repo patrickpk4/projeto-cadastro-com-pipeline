@@ -66,5 +66,7 @@ jobs:
 
   Build_plan:
     needs: [terraform_test, terraform_chekov]
-    uses: ./github/workflows/infra_CI.yaml
+    uses: ./.github/workflows/infra_CI.yaml
     secrets: inherit
+    with:
+      environment: staging
