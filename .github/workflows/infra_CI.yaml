@@ -8,14 +8,14 @@ on:
     branches:
       - main
     paths:
-      - 'infra/**'  
-permissions:
-  security-events: write      
-  actions: read  
-  id-token: write  
+      - 'infra/**'   
 jobs:
   terraform_test:
+    permissions:
+      contents: read
+      id-token: write 
     name: Terraform Test
+    environment: staging  
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -66,6 +66,9 @@ jobs:
     name: Build Plan
     needs: [terraform_test, terraform_chekov]
     environment: staging
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -83,7 +86,7 @@ jobs:
           aws-region: ${{ vars.REGION }}      
   
       - name: Terraform Init
-        working-directory: ./infra
+        working-directory: ./environment/staging
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.BUCKET }}" \
@@ -93,7 +96,7 @@ jobs:
       
           
       - name: Terraform Plan
-        working-directory: ./infra
+        working-directory: ./environment/staging
         env:
           tfvars: ${{ secrets.TF_VARS }}
         run: |
@@ -105,8 +108,8 @@ jobs:
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ github.sha }}
-          path: ./infra/tfplan  
+          name: tfplan-staging-${{ github.sha }}
+          path: ./environment/staging/tfplan  
           retention-days: 2
   
   Deploy_staging:
