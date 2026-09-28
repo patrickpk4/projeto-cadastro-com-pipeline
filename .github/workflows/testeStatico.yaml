@@ -9,11 +9,12 @@ on:
       - main
     paths:
       - 'infra'   
+      
 jobs:
   terraform_test:
+    name: Terraform Test
     permissions:
       contents: read 
-    name: Terraform Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
