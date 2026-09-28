@@ -8,13 +8,13 @@ on:
     branches:
       - main
     paths:
-      - infra/**
-
+      - 'infra'   
+      
 jobs:
   terraform_test:
-    name: Terraform Test
     permissions:
       contents: read 
+    name: Terraform Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -64,10 +64,3 @@ jobs:
         with:
           sarif_file: results.sarif
           token: ${{ secrets.GITHUB_TOKEN }}
-
-  Plan_Staging: [terraform_chekov, terraform_test ]
-    need: 
-    uses: ./.github/workflows/infra_CI.yaml
-    secrets: inherit
-    with:
-      environment: staging
