@@ -2,23 +2,10 @@ name: Terraform CI
 
 on:
   workflow_call:
-    inputs:
-      environment:
-        required: true
-        type: string
-    secrets:
-      AWS_ROLE:
-        required: true
-      BUCKET:
-        required: true
-      KEY:
-        required: true
-      TF_VARS:
-        required: true    
+      
 
 jobs:
   Plan_Staging: 
-    environment: staging
     permissions:
       contents: read
       id-token: write
