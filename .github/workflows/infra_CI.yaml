@@ -14,9 +14,10 @@ on:
       KEY:
         required: true
       TF_VARS:
-        required: true
+        required: true    
 
-  Build_Plan: 
+jobs:
+  Plan_Staging: 
     name: Build Plan
     needs: [terraform_test, terraform_chekov]
     environment: staging
