@@ -15,7 +15,7 @@ terraform {
 terraform {
   backend "s3" {
     bucket = "aws-bucket"
-   
+
   }
 }
 
