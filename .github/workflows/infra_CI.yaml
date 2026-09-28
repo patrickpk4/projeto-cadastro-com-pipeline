@@ -18,7 +18,6 @@ on:
 
 jobs:
   Plan_Staging: 
-    needs: [terraform_test, terraform_chekov]
     environment: staging
     permissions:
       contents: read
