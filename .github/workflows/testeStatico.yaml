@@ -65,6 +65,6 @@ jobs:
           sarif_file: results.sarif
           token: ${{ secrets.GITHUB_TOKEN }}
 
-    Build_plan::
+    Build_plan:
       name: build plan stagin and production
       uses: ./.github/workflows/infra_CI.yaml
