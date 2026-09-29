@@ -1,3 +1,10 @@
+name: Infrastructure CD Prod
+
+on:
+  workflow_call:
+    
+
+jobs:
 deploy-production:
     environment: production
     runs-on: ubuntu-latest
