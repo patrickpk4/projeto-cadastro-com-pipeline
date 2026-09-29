@@ -67,6 +67,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   Build_plan:
+    if: github.ref == 'refs/heads/feature/**' || github.ref == 'refs/heads/fix/**'
     name: build plan staging and production
     needs: [terraform_chekov, terraform_test]
     uses: ./.github/workflows/infra_CI.yaml

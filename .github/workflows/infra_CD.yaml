@@ -43,6 +43,7 @@ jobs:
         run: terraform apply -auto-approve tfplan    
 
   Teste_Cluster:
+    if: github.ref == 'refs/heads/feature/**' || github.ref == 'refs/heads/fix/**'
     needs: [deploy-staging]
     uses: ./.github/workflows/infra_test_cluster.yaml
     permissions:

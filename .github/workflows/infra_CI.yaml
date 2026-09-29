@@ -93,28 +93,28 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-production-${{ github.sha }}
-          path: ./infra 
+          path: ./infra/tfplan  
           retention-days: 2        
 
 
   
   Deploy_staging:
+    if: github.ref == 'refs/heads/feature/**' || github.ref == 'refs/heads/fix/**'
     needs: [Plan_Staging]
     uses: ./.github/workflows/infra_CD.yaml
     permissions:
       id-token: write
       contents: read
-    secrets: inherit  
-
+    secrets: inherit
+    
   Deploy_Production:
     if: github.ref == 'refs/heads/main'
-    needs: [Plan_Production]
+    needs: [Plan_production]
     uses: ./.github/workflows/infra_CD_Prod.yaml
     permissions:
       id-token: write
       contents: read
-    secrets: inherit   
-
+    secrets: inherit    
     
 
          
