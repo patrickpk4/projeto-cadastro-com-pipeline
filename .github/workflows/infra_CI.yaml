@@ -99,7 +99,6 @@ jobs:
 
   
   Deploy_staging:
-    if: github.ref == 'refs/heads/feature/**' || github.ref == 'refs/heads/fix/**'
     needs: [Plan_Staging]
     uses: ./.github/workflows/infra_CD.yaml
     permissions:
@@ -108,7 +107,6 @@ jobs:
     secrets: inherit
     
   Deploy_Production:
-    if: github.ref == 'refs/heads/main'
     needs: [Plan_production]
     uses: ./.github/workflows/infra_CD_Prod.yaml
     permissions:
