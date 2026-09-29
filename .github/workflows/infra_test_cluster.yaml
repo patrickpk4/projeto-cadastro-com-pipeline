@@ -78,5 +78,25 @@ jobs:
           kubectl wait --for=condition=Ready pod/test-pod --timeout=60s
           
           kubectl exec test-pod -- wget -q --timeout=10 -O- http://nginx
+
+      - name: remover pods do cluster
+        run: |
+          kubectl delete pod dns-test test-pod 
+          kubectl delete deploy nginx-deploy 
+          kubectl delete deploy nginx
+     
+      - name: Mensagem final
+        run: |
+          echo "========================================"
+          echo " Deploy finalizado"
+          echo "========================================"
+          echo "Branch:     ${{ github.ref_name }}"
+          echo "Commit:     ${{ github.sha }}"
+          echo "Autor:      ${{ github.actor }}"
+          echo "Repositório: ${{ github.repository }}"
+          echo "Run ID:     ${{ github.run_id }}"
+          echo "========================================"
+          
+              
           
           
