@@ -48,7 +48,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-staging-${{ github.sha }}
-          path: ./infra/tfplan  
+          path: ./infra
           retention-days: 2
 
   Plan_Production: 
@@ -93,7 +93,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-production-${{ github.sha }}
-          path: ./infra/tfplan  
+          path: ./infra 
           retention-days: 2        
 
 
