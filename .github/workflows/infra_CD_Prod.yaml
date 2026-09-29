@@ -5,12 +5,15 @@ on:
     branchs:
       - main
       
-    #path:
-    #  - ./infra  
+    paths:
+      - infra/**
 
 jobs:
   deploy-production:
     environment: production
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
