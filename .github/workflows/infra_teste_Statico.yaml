@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - feature/**
+      - fix/**
   pull_request:
     branches:
       - main
-    paths:
-      - 'infra'   
+    
 
 jobs:
   terraform_test:
