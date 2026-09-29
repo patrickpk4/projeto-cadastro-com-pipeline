@@ -1,7 +1,12 @@
 name: Infrastructure CD Prod
 
 on:
-  workflow_call:
+  pull_request:
+    branchs:
+      - main
+      
+    path:
+      - ./infra  
 
 jobs:
   deploy-production:
