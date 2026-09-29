@@ -1,9 +1,7 @@
 name: Infrastructure CD Prod
 
 on:
-  pull_request:
-    branches:
-      - main    
+  wokflow call:   
 
 jobs:
   deploy-production:
