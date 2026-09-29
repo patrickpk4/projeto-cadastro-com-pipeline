@@ -6,8 +6,8 @@ on:
       - feature/**
       - fix/**
     
-    paths: 
-      - infra/**
+    #paths: 
+    #  - infra/**
 jobs:
   terraform_test:
     permissions:

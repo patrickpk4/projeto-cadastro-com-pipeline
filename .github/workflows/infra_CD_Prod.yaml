@@ -5,8 +5,8 @@ on:
     branchs:
       - main
       
-    paths:
-      - infra/**
+    #paths:
+    #  - infra/**
 
 jobs:
   deploy-production:
