@@ -6,11 +6,14 @@ on:
       - main
       
     path:
-      - ./infra  
+      - infra/**
 
 jobs:
   deploy-production:
     environment: production
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
