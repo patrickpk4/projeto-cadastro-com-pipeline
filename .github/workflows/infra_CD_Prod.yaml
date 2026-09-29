@@ -1,12 +1,5 @@
-name: Infrastructure CD
-
-on:
-  workflow_call:
-    
-
-jobs:
-  deploy-staging:
-    environment: staging
+deploy-production:
+    environment: production
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -35,18 +28,9 @@ jobs:
       - name: download plan artifact
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-staging-${{ github.sha }}
+          name: tfplan-production-${{ github.sha }}
           path: ./infra
 
       - name: Terraform Apply
         working-directory: ./infra     
         run: terraform apply -auto-approve tfplan    
-
-  Teste_Cluster:
-    needs: [deploy-staging]
-    uses: ./.github/workflows/infra_test_cluster.yaml
-    permissions:
-      id-token: write
-      contents: read
-    secrets: inherit
-  
