@@ -6,7 +6,8 @@ on:
       - feature/**
       - fix/**
     
-
+    path: 
+      - ./infra
 jobs:
   terraform_test:
     permissions:
