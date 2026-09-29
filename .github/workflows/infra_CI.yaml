@@ -99,7 +99,7 @@ jobs:
 
   
   Deploy_staging:
-    needs: [Plan_Staging]
+    needs: [Plan_Staging, Plan_Production]
     uses: ./.github/workflows/infra_CD.yaml
     permissions:
       id-token: write
