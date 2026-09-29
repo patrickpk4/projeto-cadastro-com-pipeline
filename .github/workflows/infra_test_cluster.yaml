@@ -67,6 +67,7 @@ jobs:
       - name: teste comunicação entre pods 
         run: |
           kubectl apply -f ./testeEks/nginx.yaml
+          kubectl rollout status deployment/nginx --timeout=60s
           
           kubectl run test-pod \
             --image=busybox:1.36 \

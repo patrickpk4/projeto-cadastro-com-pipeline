@@ -81,7 +81,7 @@ jobs:
 
   Teste_Cluster:
     needs: [deploy-staging]
-    uses: ./.github/workflows/test_cluster.yaml
+    uses: ./.github/workflows/infra_test_cluster.yaml
     permissions:
       id-token: write
       contents: read
