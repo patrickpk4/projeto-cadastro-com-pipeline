@@ -107,6 +107,7 @@ jobs:
     secrets: inherit  
 
   Deploy_Production:
+    if: github.ref == 'refs/heads/main'
     needs: [Plan_Production]
     uses: ./.github/workflows/infra_CD_Prod.yaml
     permissions:
