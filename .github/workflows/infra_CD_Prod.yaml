@@ -5,7 +5,7 @@ on:
     branchs:
       - main
       
-    path:
+    paths:
       - infra/**
 
 jobs:

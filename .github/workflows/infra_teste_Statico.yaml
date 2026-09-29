@@ -6,7 +6,7 @@ on:
       - feature/**
       - fix/**
     
-    path: 
+    paths: 
       - infra/**
 jobs:
   terraform_test:
