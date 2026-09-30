@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - 'feature/**'
-      - 'fix/**'
+      - 'hotfix/**'
     
-    #paths: 
-    #  - 'infra/**'
+    paths: 
+      - 'infra/**'
 jobs:
   terraform_test:
     permissions:
