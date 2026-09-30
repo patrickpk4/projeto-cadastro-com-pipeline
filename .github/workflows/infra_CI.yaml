@@ -2,11 +2,11 @@ name: Terraform CI
 
 on:
   pull_request:
-    branchs:
-      - main
+    branches:
+      - 'main'
 
-    paths:
-      - 'infra/**'  
+    #paths:
+    #  - 'infra/**'  
 
 jobs:
   Plan_Staging: 
