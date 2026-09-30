@@ -10,49 +10,50 @@ on:
       
 jobs:         
   Plan_Production: 
-  environment: production
-  permissions:
-    id-token: write
-    contents: read
-  runs-on: ubuntu-latest
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v4
-      with:
-        terraform_version: ${{ vars.TF_VERSION }}
-    - name: aws credentials
-      uses: aws-actions/configure-aws-credentials@v6
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE }}
-        aws-region: ${{ vars.REGION }}      
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ vars.TF_VERSION }}
+      - name: aws credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ vars.REGION }}      
+  
+      - name: Terraform Init
+        working-directory: ./infra
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.BUCKET }}" \
+            -backend-config="key=${{ secrets.KEY }}" \
+            -backend-config="region=${{ vars.REGION }}" 
+      
+          
+      - name: Terraform Plan
+        working-directory: ./infra
+        env:
+          tfvars: ${{ secrets.TF_VARS }}
+        run: |
+          echo "${tfvars}" > terraform.tfvars
+          terraform plan \
+          -var-file="terraform.tfvars" \
+          -out=tfplan 
 
-    - name: Terraform Init
-      working-directory: ./infra
-      run: |
-        terraform init \
-          -backend-config="bucket=${{ secrets.BUCKET }}" \
-          -backend-config="key=${{ secrets.KEY }}" \
-          -backend-config="region=${{ vars.REGION }}" \
-    
-        
-    - name: Terraform Plan
-      working-directory: ./infra
-      env:
-        tfvars: ${{ secrets.TF_VARS }}
-      run: |
-        echo "${tfvars}" > terraform.tfvars
-        terraform plan \
-        -var-file="terraform.tfvars" \
-        -out=tfplan \
-    - name: Upload Plan Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: tfplan-production-${{ github.sha }}
-        path: ./infra
-        retention-days: 2
-
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-production-${{ github.sha }}
+          path: ./infra
+          retention-days: 2
+  
   Deploy_Production:
     needs: [Plan_Production]
     uses: ./.github/workflows/infra_CD_Prod.yaml
