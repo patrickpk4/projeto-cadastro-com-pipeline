@@ -1,4 +1,4 @@
-name: buil plan Conditions
+name: buil plan production
 
 on:
   pull_request:
