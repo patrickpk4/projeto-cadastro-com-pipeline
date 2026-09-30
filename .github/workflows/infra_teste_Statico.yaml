@@ -63,5 +63,12 @@ jobs:
         with:
           sarif_file: results.sarif
           token: ${{ secrets.GITHUB_TOKEN }}
-
+          
+  Build_Plan:
+    needs: [terraform_test, terraform_chekov]
+    uses: ./.github/workflows/infra_CI.yaml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit  
   
