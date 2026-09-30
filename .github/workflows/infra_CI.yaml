@@ -1,7 +1,8 @@
 name: Terraform CI
 
 on:
-  workflow_call: 
+  pull_request:
+    branches: [main] 
 
 jobs:
   Plan_Staging: 
