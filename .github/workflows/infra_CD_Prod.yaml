@@ -1,10 +1,8 @@
 name: Infrastructure CD Prod
 
 on:
-  pull_request:
-    branches:
-      - 'main'
-
+  workflow_call:
+  
 jobs:
   deploy-production:
     environment: production
