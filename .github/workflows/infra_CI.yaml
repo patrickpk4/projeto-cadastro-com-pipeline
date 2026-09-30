@@ -99,19 +99,17 @@ jobs:
   Deploy_staging:
     needs: [Plan_Staging]
     uses: ./.github/workflows/infra_CD.yaml
-    with:
-      permissions:
-        id-token: write
-        contents: read
+    permissions:
+      id-token: write
+      contents: read
     secrets: inherit
 
   Deploy_Production:
     needs: [Plan_Production]
     uses: ./.github/workflows/infra_CD_Prod.yaml
-    with:
-      permissions:
-        id-token: write
-        contents: read
+    permissions:
+      id-token: write
+      contents: read
     secrets: inherit  
     
    
