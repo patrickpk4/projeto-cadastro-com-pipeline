@@ -1,9 +1,12 @@
 name: Terraform CI
 
 on:
-  workflow_call:
-    
-      
+  pull_request:
+    branchs:
+      - 'main'
+
+    paths:
+      - 'infra/**'  
 
 jobs:
   Plan_Staging: 
@@ -105,6 +108,14 @@ jobs:
       id-token: write
       contents: read
     secrets: inherit
+
+  Deploy_Production:
+    needs: [Plan_Production]
+    uses: ./.github/workflows/infra_CD_Prod.yaml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit  
     
    
     
