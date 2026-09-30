@@ -3,7 +3,7 @@ name: Infrastructure CD Prod
 on:
   pull_request:
     branches:
-      - main
+      - 'main'
 
 jobs:
   deploy-production:
