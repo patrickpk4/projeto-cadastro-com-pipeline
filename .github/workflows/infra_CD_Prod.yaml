@@ -1,12 +1,12 @@
 name: Infrastructure CD Prod
 
 on:
-  pull_request:
+  push:
     branchs:
-      - main
+      - 'main'
       
     #paths:
-    #  - infra/**
+    #  - 'infra/**'
 
 jobs:
   deploy-production:

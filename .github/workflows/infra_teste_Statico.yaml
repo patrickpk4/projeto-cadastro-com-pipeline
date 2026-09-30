@@ -3,11 +3,11 @@ name: teste estatico
 on:
   push:
     branches:
-      - feature/**
-      - fix/**
+      - 'feature/**'
+      - 'fix/**'
     
     #paths: 
-    #  - infra/**
+    #  - 'infra/**'
 jobs:
   terraform_test:
     permissions:
