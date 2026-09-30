@@ -1,12 +1,7 @@
 name: Terraform CI
 
 on:
-  pull_request:
-    branches:
-      - 'main'
-
-    #paths:
-    #  - 'infra/**'  
+  workflow_call: 
 
 jobs:
   Plan_Staging: 
