@@ -5,7 +5,7 @@ on:
     branches:
       - 'main'
       
-  jobs:         
+jobs:         
   Plan_Production: 
       environment: production
       runs-on: ubuntu-latest
