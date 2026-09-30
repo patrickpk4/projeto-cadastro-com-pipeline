@@ -1,19 +1,11 @@
 name: Infrastructure CD Prod
 
 on:
-  push:
-    branchs:
-      - 'main'
-      
-    #paths:
-    #  - 'infra/**'
+  workflow_call:
 
 jobs:
   deploy-production:
     environment: production
-    permissions:
-      id-token: write
-      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
