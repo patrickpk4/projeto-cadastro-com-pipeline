@@ -3,7 +3,7 @@ name: Terraform CI
 on:
   pull_request:
     branchs:
-      - 'main'
+      - main
 
     paths:
       - 'infra/**'  
