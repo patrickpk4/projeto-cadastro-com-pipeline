@@ -5,8 +5,8 @@ on:
     branches:
       - 'main'
 
-    paths: 
-      - 'infra/**'  
+    #paths: 
+    #  - 'infra/**'  
       
 jobs:         
   Plan_Production: 
