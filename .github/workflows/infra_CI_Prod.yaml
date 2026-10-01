@@ -1,7 +1,9 @@
-name: buil plan production
+name: build plan production
 
 on:
-  workflow_call:  
+  push:
+    branches:
+      - main
       
 jobs:         
   Plan_Production: 
