@@ -96,14 +96,7 @@ jobs:
           echo "Repositório: ${{ github.repository }}"
           echo "Run ID:     ${{ github.run_id }}"
           echo "========================================"
-
-  Plan_Production:
-    needs: [test-cluster]
-    uses: ./.github/workflows/infra_CI_Prod.yaml
-    permissions:
-      id-token: write
-      contents: read
-    secrets: inherit          
+       
           
               
           
