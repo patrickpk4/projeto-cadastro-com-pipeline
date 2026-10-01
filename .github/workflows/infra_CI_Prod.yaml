@@ -2,8 +2,7 @@ name: build plan production
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
       
 jobs:         
   Plan_Production: 
