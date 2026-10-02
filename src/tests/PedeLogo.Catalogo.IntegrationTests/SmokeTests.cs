@@ -7,16 +7,19 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using PedeLogo.Catalogo.Api;
+using PedeLogo.Catalogo.Api.Config;
 using Xunit;
 
 namespace PedeLogo.Catalogo.IntegrationTests
 {
+    [Collection("ConfigManager")]
     public class SmokeTests : IClassFixture<MongoFixture>, IClassFixture<CustomWebApplicationFactory>
     {
         private readonly HttpClient _client;
 
         public SmokeTests(MongoFixture mongo, CustomWebApplicationFactory factory)
         {
+            ConfigManager.Reset();
             factory.MongoDatabase = mongo.Database;
             _client = factory.CreateClient();
             _client.DefaultRequestHeaders.Clear();
