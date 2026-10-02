@@ -4,8 +4,8 @@ on:
   push:
     branches: [feature/**, hotfix/**]
     
-    #paths: 
-    #  - 'infra/**'
+    paths: 
+      - 'infra/**'
 jobs:
   terraform_test:
     permissions:
