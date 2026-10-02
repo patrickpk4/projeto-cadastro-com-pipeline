@@ -1,0 +1,135 @@
+name: teste estatico no app .net
+
+on:
+  push:
+    branches: [feature/**, hotfix/**]
+    
+jobs:
+  teste_unitario:
+    permissions:
+      contents: read 
+      id-token: write
+    name: Teste Unitário
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj
+
+      - name: Run tests
+        run:  |
+           dotnet test ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj  \
+           --verbosity normal --logger "trx;LogFileName=test_results.trx" \
+           --results-directory ./TestResults
+
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.sha }}
+          path: ./TestResults/
+
+  integration_test:
+    permissions:
+      contents: read 
+      id-token: write
+    name: Teste de Integração
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:4.4.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: ${{ secrets.mongo_user}}
+          MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.mongo_pwd}}
+          Mongo__DataBase: admin
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongo --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/tests/PedeLogo.Catalogo.IntegrationTests/PedeLogo.Catalogo.IntegrationTests.csproj
+
+      - name: Run integration tests
+        env:
+          MONGO_CONNECTION_STRING: mongodb://${{ secrets.mongo_user }}:${{ secrets.mongo_pwd }}@localhost:27017/?authSource=admin
+        run:  |
+           dotnet test ./src/tests/PedeLogo.Catalogo.IntegrationTests/PedeLogo.Catalogo.IntegrationTests.csproj  \
+           --verbosity normal --logger "trx;LogFileName=integration_test_results.trx" \
+            --results-directory ./TestResults \
+            --warnaserror:false
+
+      - name: Upload Integration Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-${{ github.sha }} 
+          path: ./TestResults/    
+
+  sonarcloud:
+    permissions:
+      contents: read 
+      id-token: write
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'    
+
+      - name: Install SonarScanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner   
+
+      - name: begin scanner
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${{ secrets.SONAR_PROJECT_KEY }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /o:"${{ secrets.SONAR_ORGANIZATION }}" \
+            /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+    
+      - name: Restore dependencies
+        run: dotnet restore ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj
+
+      - name: Run unit tests with coverage
+        run: |
+          dotnet test ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj \
+            --no-restore \
+            --results-directory ./TestResults \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: sonnar end scanner
+        run: |
+          dotnet sonarscanner end \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" 
