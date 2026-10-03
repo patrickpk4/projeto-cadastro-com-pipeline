@@ -30,13 +30,13 @@ namespace PedeLogo.Catalogo.Api.Controllers
         }
 
         [HttpGet("{id}", Name = "GetProduto")]
-        public Produto Get(string id)
+        public ActionResult<Produto> Get(string id)
         {
             this._logger.LogInformation("Entrou no Get By Id");
             ObjectId objID;
             if (!ObjectId.TryParse(id, out objID))
             {
-                throw new Exception("Erro ao converter.");
+                return BadRequest();
             }
 
             return this._collection.Find(p => p.Id.Equals((id))).FirstOrDefault();

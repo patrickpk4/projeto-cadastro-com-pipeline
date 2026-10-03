@@ -30,5 +30,11 @@ namespace PedeLogo.Catalogo.Api.Config
         {
             _unHealth = true;
         }
+
+        public static void Reset()
+        {
+            _unreadUntil = null;
+            _unHealth = false;
+        }
     }
 }

@@ -60,15 +60,15 @@ namespace PedeLogo.Catalogo.UnitTests
             var cursorMock = CriarCursorMock(new List<Produto> { produto });
             _collectionMock.Setup(c => c.FindSync(It.IsAny<FilterDefinition<Produto>>(), It.IsAny<FindOptions<Produto, Produto>>(), It.IsAny<CancellationToken>())).Returns(cursorMock.Object);
             var resultado = _controller.Get(id);
-            resultado.Should().NotBeNull();
-            resultado.Nome.Should().Be("Hamburguer");
+            resultado.Value.Should().NotBeNull();
+            resultado.Value.Nome.Should().Be("Hamburguer");
         }
 
         [Fact][Trait("Category", "Unit")]
-        public void GetById_ComIdInvalido_DeveLancarException()
+        public void GetById_ComIdInvalido_DeveRetornarBadRequest()
         {
-            var act = () => _controller.Get("id-invalido");
-            act.Should().Throw<System.Exception>().WithMessage("Erro ao converter.");
+            var resultado = _controller.Get("id-invalido");
+            resultado.Result.Should().BeOfType<BadRequestResult>();
         }
 
         [Fact][Trait("Category", "Unit")]

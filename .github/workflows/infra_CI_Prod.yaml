@@ -3,6 +3,9 @@ name: build plan production
 on:
   push:
     branches: [main]
+
+    paths: 
+      - 'infra/**'
       
 jobs:         
   Plan_Production: 

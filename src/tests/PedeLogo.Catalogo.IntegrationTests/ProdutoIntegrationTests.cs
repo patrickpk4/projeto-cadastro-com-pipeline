@@ -12,11 +12,17 @@ using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PedeLogo.Catalogo.Api;
+using PedeLogo.Catalogo.Api.Config;
 using PedeLogo.Catalogo.Api.Model;
 using Xunit;
 
 namespace PedeLogo.Catalogo.IntegrationTests
 {
+    [CollectionDefinition("ConfigManager", DisableParallelization = true)]
+    public class ConfigManagerCollection
+    {
+    }
+
     public class MongoFixture : IDisposable
     {
         public IMongoDatabase Database { get; private set; }
@@ -90,6 +96,7 @@ namespace PedeLogo.Catalogo.IntegrationTests
         }
     }
 
+    [Collection("ConfigManager")]
     public class ProdutoIntegrationTests : IClassFixture<MongoFixture>, IClassFixture<CustomWebApplicationFactory>, IDisposable
     {
         private readonly HttpClient _client;
@@ -98,6 +105,7 @@ namespace PedeLogo.Catalogo.IntegrationTests
 
         public ProdutoIntegrationTests(MongoFixture mongo, CustomWebApplicationFactory factory)
         {
+            ConfigManager.Reset();
             _collection = mongo.Database.GetCollection<Produto>("Produto");
             factory.MongoDatabase = mongo.Database;
             _client = factory.CreateClient();
