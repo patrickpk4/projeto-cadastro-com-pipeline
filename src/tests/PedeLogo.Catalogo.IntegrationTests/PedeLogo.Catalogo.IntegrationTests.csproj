@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PedeLogo.Catalogo.Api\PedeLogo.Catalogo.Api.csproj" />
+    <ProjectReference Include="..\..\PedeLogo.Catalogo.Api\PedeLogo.Catalogo.Api.csproj" />
   </ItemGroup>
 
 </Project>
