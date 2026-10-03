@@ -3,8 +3,8 @@ name: Terraform CI
 on:
   pull_request:
     branches: [main] 
-  paths:
-    - 'infra/**'  
+    paths:
+      - 'infra/**'  
 
 jobs:
   Plan_Staging: 
