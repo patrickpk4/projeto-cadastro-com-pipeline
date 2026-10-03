@@ -24,7 +24,7 @@ jobs:
           docker build \
           -t ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }} \
           -t ghcr.io/${{ github.repository }}/catalogo-api:latest \
-           ./src/PedeLogo.Catalogo.Api    
+           ./src/PedeLogo.Catalogo.Api/Dockerfile
           retention-days: 2
 
       - name: Scan Docker image
