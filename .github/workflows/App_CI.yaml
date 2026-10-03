@@ -12,6 +12,9 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
@@ -22,10 +25,10 @@ jobs:
       - name: docker build
         run: | 
           docker build \
-          -t ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }} \
-          -t ghcr.io/${{ github.repository }}/catalogo-api:latest \
-           ./src/PedeLogo.Catalogo.Api/Dockerfile
-          retention-days: 2
+            -f ./src/PedeLogo.Catalogo.Api/Dockerfile \
+            -t ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }} \
+            -t ghcr.io/${{ github.repository }}/catalogo-api:latest \
+            .
 
       - name: Scan Docker image
         uses: aquasecurity/trivy-action@master
