@@ -44,8 +44,7 @@ jobs:
           docker push ghcr.io/${{ github.repository }}/catalogo-api:latest  
 
   App_cd:
-    needs: build
-    environment: staging
+    needs: [build]
     uses: ./.github/workflows/App_CD.yaml
     permissions:
        permissions:
