@@ -138,7 +138,6 @@ jobs:
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" 
 
   app_ci:
-    - name: app ci
       needs: [teste_unitario, integration_test, sonarcloud]
       uses: ./.github/workflows/App_CI.yaml
       permissions:
