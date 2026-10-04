@@ -35,7 +35,8 @@ jobs:
       - name: Run tests
         run:  |
            dotnet test ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj  \
-           --verbosity normal --logger "trx;LogFileName=test_results.trx" \
+           --verbosity normal \
+           --logger "trx;LogFileName=test_results.trx" \
            --results-directory ./TestResults
 
 
@@ -128,11 +129,11 @@ jobs:
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
     
       - name: Restore dependencies
-        run: dotnet restore ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj
+        run: dotnet restore ./src/PedeLogo.Catalogo.Api/PedeLogo.Catalogo.Api.csproj
 
       - name: Run unit tests with coverage
         run: |
-          dotnet test ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj \
+          dotnet test ./src/PedeLogo.Catalogo.Api/PedeLogo.Catalogo.Api.csproj \
             --no-restore \
             --results-directory ./TestResults \
             --collect:"XPlat Code Coverage" \
