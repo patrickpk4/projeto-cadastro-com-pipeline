@@ -2,9 +2,6 @@ name: App CI
 
 on:
   workflow_call:
-    inputs:
-      permissions:
-        required: true
 
 
 jobs:
