@@ -29,9 +29,11 @@ spec:
               echo "Aguardando conexão com o MongoDB...";
               sleep 3;
               done
+      imagePullSecrets:
+        - name: ghcr-secret        
       containers:
-        - name: api-container
-          image: patrickpk4/catalogo:latest
+        - name: catalogo-api
+          image: ghcr.io/patrickpk4/projeto-cadastro-com-pipeline/catalogo-api:IMAGE_TAG
           resources:
             requests:
               memory: "128Mi"

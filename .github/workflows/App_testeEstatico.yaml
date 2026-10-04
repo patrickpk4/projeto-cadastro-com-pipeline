@@ -2,7 +2,7 @@ name: teste estatico no app .net
 
 on:
   push:
-    branches: [feature/**, hotfix/**]
+    branches: [feature/**, hotfix/**, main]
 
     paths:
       - 'src/**'  
