@@ -129,11 +129,16 @@ jobs:
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
     
       - name: Restore dependencies
-        run: dotnet restore ./src/PedeLogo.Catalogo.Api/PedeLogo.Catalogo.Api.csproj
+        run: dotnet restore ./src/PedeLogo.Catalogo.sln
+
+      - name: Build solution
+        run: dotnet build ./src/PedeLogo.Catalogo.sln --no-restore --configuration Release
 
       - name: Run unit tests with coverage
         run: |
-          dotnet test ./src/PedeLogo.Catalogo.Api/PedeLogo.Catalogo.Api.csproj \
+          dotnet test ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj \
+            --configuration Release \
+            --no-build \
             --no-restore \
             --results-directory ./TestResults \
             --collect:"XPlat Code Coverage" \
