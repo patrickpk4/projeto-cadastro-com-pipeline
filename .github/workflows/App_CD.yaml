@@ -5,10 +5,6 @@ on:
     
 jobs:
   app_cd:
-    permissions:
-      contents: read 
-      id-token: write
-      actions: read
     environment: staging  
     runs-on: ubuntu-latest
     steps:
