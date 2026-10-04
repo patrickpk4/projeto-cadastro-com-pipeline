@@ -4,8 +4,14 @@ on:
   push:
     branches: [feature/**, hotfix/**]
 
+    paths:
+      - 'src/**'  
+
   pull_request:
     branches: [main]  
+
+    paths:
+      - 'src/**'
     
 jobs:
   teste_unitario:
