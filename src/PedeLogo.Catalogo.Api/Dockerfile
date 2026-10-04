@@ -25,4 +25,5 @@ EXPOSE 80
 EXPOSE 443
 
 COPY --from=build /app/publish .
+USER $APP_UID
 ENTRYPOINT ["dotnet", "PedeLogo.Catalogo.Api.dll"]
