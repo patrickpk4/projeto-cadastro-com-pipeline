@@ -47,10 +47,9 @@ jobs:
     needs: [build]
     uses: ./.github/workflows/App_CD.yaml
     permissions:
-       permissions:
-        contents: read 
-        id-token: write
-        actions: read
+      contents: read 
+      id-token: write
+      actions: read
     secrets: inherit
 
              
