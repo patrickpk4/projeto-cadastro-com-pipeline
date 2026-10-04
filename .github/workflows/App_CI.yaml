@@ -45,8 +45,8 @@ jobs:
 
   App_cd:
     needs: build
-    uses: ./.github/workflows/App_CD.yaml
     environment: staging
+    uses: ./.github/workflows/App_CD.yaml
     permissions:
        permissions:
         contents: read 
