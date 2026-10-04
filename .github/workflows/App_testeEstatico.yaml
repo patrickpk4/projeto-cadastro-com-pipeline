@@ -154,5 +154,7 @@ jobs:
       needs: [teste_unitario, integration_test, sonarcloud]
       uses: ./.github/workflows/App_CI.yaml
       permissions:
+        actions: read
         contents: read
+        id-token: write
         packages: write
