@@ -1,0 +1,50 @@
+name: App CI
+
+on:
+  workflow_call:
+
+
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: docker build
+        run: | 
+          docker build \
+            -f ./src/PedeLogo.Catalogo.Api/Dockerfile \
+            -t ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }} \
+            -t ghcr.io/${{ github.repository }}/catalogo-api:latest \
+            .
+
+      - name: Scan Docker image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
+          format: 'table'
+          ignore-unfixed: true
+          severity: CRITICAL
+          vuln-type: 'os,library'
+          exit-code: '1'      
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}/catalogo-api:latest  
+             
+
+      
+
+
+      

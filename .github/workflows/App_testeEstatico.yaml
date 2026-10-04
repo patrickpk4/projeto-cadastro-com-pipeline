@@ -3,6 +3,9 @@ name: teste estatico no app .net
 on:
   push:
     branches: [feature/**, hotfix/**]
+
+  pull_request:
+    branches: [main]  
     
 jobs:
   teste_unitario:
@@ -133,3 +136,11 @@ jobs:
         run: |
           dotnet sonarscanner end \
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" 
+
+  app_ci:
+      if: github.event_name == 'pull_request'
+      needs: [teste_unitario, integration_test, sonarcloud]
+      uses: ./.github/workflows/App_CI.yaml
+      permissions:
+        contents: read
+        packages: write
