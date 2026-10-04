@@ -18,7 +18,6 @@ jobs:
       - name: download docker image
         run: |
           docker pull ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
-          docker tag ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }} 
 
       - name: aws credentials
         uses: aws-actions/configure-aws-credentials@v6
