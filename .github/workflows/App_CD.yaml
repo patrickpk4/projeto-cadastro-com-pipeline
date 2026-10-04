@@ -5,6 +5,11 @@ on:
     
 jobs:
   app_cd:
+    permissions:
+      contents: read 
+      id-token: write
+      actions: read
+    environment: staging  
     runs-on: ubuntu-latest
     steps:
       - name: Login to GitHub Container Registry
@@ -28,8 +33,8 @@ jobs:
       - name: Configure kubectl
         run: |
           aws eks update-kubeconfig \
-            --region us-east-1 \
-            --name k8s-cluster
+            --region ${{ vars.REGION }} \
+            --name ${{ vars.CLUSTER_NAME }}
       
       - uses: Azure/k8s-deploy@v7
         with:
