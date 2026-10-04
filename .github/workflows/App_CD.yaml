@@ -1,0 +1,40 @@
+name: App CD
+
+on: 
+  workflow_call:
+    
+jobs:
+  app_cd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: download docker image
+        run: |
+          docker pull ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
+          docker tag ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }} 
+
+      - name: aws credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ vars.REGION }} 
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region us-east-1 \
+            --name k8s-cluster
+      
+      - uses: Azure/k8s-deploy@v7
+        with:
+          manifests: |
+            k8s/cadastro-k8s 
+            k8s/mongodb-k8s
+          images: |
+            ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
