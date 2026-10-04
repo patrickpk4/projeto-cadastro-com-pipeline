@@ -43,7 +43,8 @@ jobs:
       - name: Push Docker image
         run: |
           docker push ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository }}/catalogo-api:latest     
+          docker push ghcr.io/${{ github.repository }}/catalogo-api:latest  
+             
 
       
 
