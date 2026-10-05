@@ -4,14 +4,14 @@ on:
   push:
     branches: [feature/**, hotfix/**, main]
 
-    paths:
-      - 'src/**'  
+    #paths:
+    #  - 'src/**'  
 
   pull_request:
     branches: [main]  
 
-    paths:
-      - 'src/**'
+    #paths:
+    #  - 'src/**'
     
 jobs:
   teste_unitario:
@@ -83,7 +83,8 @@ jobs:
           MONGO_CONNECTION_STRING: mongodb://${{ secrets.mongo_user }}:${{ secrets.mongo_pwd }}@localhost:27017/?authSource=admin
         run:  |
            dotnet test ./src/tests/PedeLogo.Catalogo.IntegrationTests/PedeLogo.Catalogo.IntegrationTests.csproj  \
-           --verbosity normal --logger "trx;LogFileName=integration_test_results.trx" \
+           --verbosity normal \
+           --logger "trx;LogFileName=integration_test_results.trx" \
             --results-directory ./TestResults \
             --warnaserror:false
 
@@ -129,11 +130,11 @@ jobs:
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
     
       - name: Restore dependencies
-        run: dotnet restore ./src/PedeLogo.Catalogo.Api/PedeLogo.Catalogo.Api.csproj
+        run: dotnet restore ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj
 
       - name: Run unit tests with coverage
         run: |
-          dotnet test ./src/PedeLogo.Catalogo.Api/PedeLogo.Catalogo.Api.csproj \
+          dotnet test ./src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj \
             --no-restore \
             --results-directory ./TestResults \
             --collect:"XPlat Code Coverage" \
@@ -152,4 +153,6 @@ jobs:
         contents: read
         packages: write
         id-token: write
-        
+        actions: write
+      secrets: inherit  
+
