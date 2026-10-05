@@ -43,10 +43,18 @@ jobs:
             k8s/cadastro-k8s/configmap.yaml
             k8s/cadastro-k8s/service-cadastro.yaml
             k8s/cadastro-k8s/hpa-cadastro.yaml
+            k8s/cadastro-k8s/role-cadastro.yaml
+            k8s/cadastro-k8s/rolebinding-cadastro.yaml
+            k8s/cadastro-k8s/networkpolicy-cadastro.yaml
             k8s/mongodb-k8s/serviceaccount-mongodb.yaml
             k8s/mongodb-k8s/mongodb.yaml
             k8s/mongodb-k8s/secret-mongodb.yaml
             k8s/mongodb-k8s/service-mongodb.yaml
             k8s/mongodb-k8s/hpa-mongodb.yaml
+            k8s/mongodb-k8s/hpa-mongodb.yaml
+            k8s/mongodb-k8s/networkpolicy-mongodb.yaml
+            k8s/mongodb-k8s/role-mongodb.yaml
+            k8s/mongodb-k8s/rolebinding-mongodb.yaml
+
           images: |
             ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
