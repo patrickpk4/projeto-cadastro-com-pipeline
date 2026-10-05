@@ -8,6 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
@@ -34,14 +37,14 @@ jobs:
       - uses: Azure/k8s-deploy@v7
         with:
           manifests: |
-            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/cadastro.yaml
-            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/secret-cadastro.yaml
-            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/configmap.yaml
-            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/service-cadastro.yaml
-            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/hpa-cadastro.yaml
-            ./projeto-cadastro-com-pipeline/k8s/mongodb-k8s/mongodb.yaml
-            ./projeto-cadastro-com-pipeline/k8s/mongodb-k8s/secret-mongodb.yaml
-            ./projeto-cadastro-com-pipeline/k8s/mongodb-k8s/service-mongodb.yaml
-            ./projeto-cadastro-com-pipeline/k8s/mongodb-k8s/hpa-mongodb.yaml
+            k8s/cadastro-k8s/cadastro.yaml
+            k8s/cadastro-k8s/secret-cadastro.yaml
+            k8s/cadastro-k8s/configmap.yaml
+            k8s/cadastro-k8s/service-cadastro.yaml
+            k8s/cadastro-k8s/hpa-cadastro.yaml
+            k8s/mongodb-k8s/mongodb.yaml
+            k8s/mongodb-k8s/secret-mongodb.yaml
+            k8s/mongodb-k8s/service-mongodb.yaml
+            k8s/mongodb-k8s/hpa-mongodb.yaml
           images: |
             ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
