@@ -34,7 +34,14 @@ jobs:
       - uses: Azure/k8s-deploy@v7
         with:
           manifests: |
-            k8s/cadastro-k8s 
-            k8s/mongodb-k8s
+            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/cadastro.yaml
+            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/secret-cadastro.yaml
+            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/configmap.yaml
+            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/service-cadastro.yaml
+            ./projeto-cadastro-com-pipeline/k8s/cadastro-k8s/hpa-cadastro.yaml
+            ./projeto-cadastro-com-pipeline/k8s/mongodb-k8s/mongodb.yaml
+            ./projeto-cadastro-com-pipeline/k8s/mongodb-k8s/secret-mongodb.yaml
+            ./projeto-cadastro-com-pipeline/k8s/mongodb-k8s/service-mongodb.yaml
+            ./projeto-cadastro-com-pipeline/k8s/mongodb-k8s/hpa-mongodb.yaml
           images: |
             ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
