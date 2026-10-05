@@ -37,11 +37,13 @@ jobs:
       - uses: Azure/k8s-deploy@v7
         with:
           manifests: |
+            k8s/cadastro-k8s/serviceaccount-cadastro.yaml
             k8s/cadastro-k8s/cadastro.yaml
             k8s/cadastro-k8s/secret-cadastro.yaml
             k8s/cadastro-k8s/configmap.yaml
             k8s/cadastro-k8s/service-cadastro.yaml
             k8s/cadastro-k8s/hpa-cadastro.yaml
+            k8s/mongodb-k8s/serviceaccount-mongodb.yaml
             k8s/mongodb-k8s/mongodb.yaml
             k8s/mongodb-k8s/secret-mongodb.yaml
             k8s/mongodb-k8s/service-mongodb.yaml
