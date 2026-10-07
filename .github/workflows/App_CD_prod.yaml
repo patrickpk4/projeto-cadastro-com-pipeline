@@ -1,4 +1,4 @@
-name: App CD Prod
+name: App CD Production
 
 on: 
   push:
