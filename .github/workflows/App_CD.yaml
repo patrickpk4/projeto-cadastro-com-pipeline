@@ -58,3 +58,8 @@ jobs:
 
           images: |
             ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
+
+      - name: ZAP Scan
+        uses: zaproxy/action-api-scan@v0.10.0
+        with:
+          target: 'https://www.zaproxy.org/'      
