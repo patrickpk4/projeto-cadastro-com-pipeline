@@ -134,7 +134,9 @@ jobs:
 
       - name: Run .NET build
         run: |
-          dotnet build ./PedeLogo.Catalogo.sln
+          dotnet build ./PedeLogo.Catalogo.sln \
+            --configuration Release \
+            --no-restore
 
 
       - name: sonnar end scanner
