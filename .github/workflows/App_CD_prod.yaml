@@ -1,18 +1,11 @@
 name: App CD Prod
 
 on: 
-  push:
-    branches: [main]
-    
-    paths: [ src/**]
+  workflow_call:
     
 jobs:
   app_cd:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-      actions: write
     environment: production
     steps:
       - name: Checkout code
