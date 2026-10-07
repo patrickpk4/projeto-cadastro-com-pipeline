@@ -130,11 +130,11 @@ jobs:
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
     
       - name: Restore dependencies
-        run: dotnet restore ./PedeLogo.Catalogo.sln
+        run: dotnet restore ./src/PedeLogo.Catalogo.sln
 
       - name: Run .NET build
         run: |
-          dotnet build ./PedeLogo.Catalogo.sln \
+          dotnet build ./src/PedeLogo.Catalogo.sln \
             --configuration Release \
             --no-restore
 
