@@ -1,10 +1,7 @@
-name: App CD Prod
+name: App CD Production
 
 on: 
-  push:
-    branches: [main]
-    
-    paths: [ src/**]
+  workflow_call:
     
 jobs:
   app_cd:
