@@ -62,4 +62,4 @@ jobs:
       - name: ZAP Scan
         uses: zaproxy/action-api-scan@v0.10.0
         with:
-          target: 'https://www.zaproxy.org/'      
+          target: 'http://a03f866a9f466450b8a174e4f1dab8b7-630830030.us-east-2.elb.amazonaws.com'      
