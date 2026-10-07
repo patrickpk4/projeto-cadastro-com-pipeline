@@ -64,13 +64,5 @@ jobs:
         with:
           target: 'http://a03f866a9f466450b8a174e4f1dab8b7-630830030.us-east-2.elb.amazonaws.com/swagger/index.html' 
 
-  App_cd_prod:
-    if: github.envent.name == 'push' && github.ref == 'refs/heads/main'
-    needs: app_cd
-    uses: ./.github/workflows/App_CD_prod.yaml
-    permissions:
-      contents: read
-      id-token: write
-      actions: write
-    secrets: inherit               
+  
 
