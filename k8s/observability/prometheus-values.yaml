@@ -1,0 +1,15 @@
+prometheus:
+  prometheusSpec:
+    # permite descobrir ServiceMonitors/PodMonitors de qualquer namespace, sem exigir label do release
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    retention: 7d
+    emptyDir: {}
+    #storageSpec:
+    #  volumeClaimTemplate:
+    #    spec:
+    #      accessModes: ["ReadWriteOnce"]
+    #      resources:
+    #        requests:
+    #          storage: 20Gi
+    # para teste sem EBS CSI, remova o storageSpec (usa emptyDir, perde dados ao reiniciar)
