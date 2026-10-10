@@ -92,7 +92,7 @@ module "eks" {
       cidr_blocks      = ["0.0.0.0/0"]
       ipv6_cidr_blocks = ["::/0"]
     }
-    
+
     ingress_cluster_9443_webhook = {
       description                   = "Control plane para webhook do OTel Operator"
       protocol                      = "tcp"
@@ -101,7 +101,7 @@ module "eks" {
       type                          = "ingress"
       source_cluster_security_group = true
     }
-  
+
   }
 
 
