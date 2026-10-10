@@ -62,7 +62,7 @@ jobs:
       - name: ZAP Scan - smoke test
         uses: zaproxy/action-api-scan@v0.10.0
         with:
-          target: 'http://a03f866a9f466450b8a174e4f1dab8b7-630830030.us-east-2.elb.amazonaws.com/swagger/index.html' 
+          target: 'http://a80efcaf21b47455d8e169395a632bc6-319688690.us-east-2.elb.amazonaws.com/swagger/index.html' 
 
   App_cd_prod:
     needs: app_cd
