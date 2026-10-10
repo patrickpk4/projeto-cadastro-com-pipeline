@@ -1,7 +1,7 @@
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
-  name: coletorOTel
+  name: demo
 spec:
   image: otel/opentelemetry-collector-contrib:0.160.0 
   config:
