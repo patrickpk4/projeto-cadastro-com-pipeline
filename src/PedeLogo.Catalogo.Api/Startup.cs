@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using Prometheus;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PedeLogo.Catalogo.Api.Config;
 using Microsoft.AspNetCore.Http;
