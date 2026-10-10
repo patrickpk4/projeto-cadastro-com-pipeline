@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using Prometheus;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PedeLogo.Catalogo.Api.Config;
 using Microsoft.AspNetCore.Http;
@@ -49,7 +49,7 @@ namespace PedeLogo.Catalogo.Api
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
                 {
-                    Version = "v1.0.0",
+                    Version = "v1.0.1",
                     Title = "API para cadastro de Produtos",
                     Description = "API para cadastro de Produtos"
                 });
