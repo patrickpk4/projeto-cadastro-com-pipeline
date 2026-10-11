@@ -38,11 +38,11 @@ spec:
           image: ghcr.io/patrickpk4/projeto-cadastro-com-pipeline/catalogo-api:IMAGE_TAG
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "50m"
+              memory: "256Mi"
+              cpu: "200m"
             limits:
-              memory: "128Mi"
-              cpu: "70m"
+              memory: "384Mi"
+              cpu: "500m"
           ports:
             - containerPort: 8080
               name: http
@@ -64,7 +64,7 @@ spec:
               scheme: HTTP
             periodSeconds: 5
             timeoutSeconds: 2
-            failureThreshold: 5
+            failureThreshold: 30
           envFrom:
             - configMapRef:
                 name: catalogo-config
