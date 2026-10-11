@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
-using Prometheus;
 using Microsoft.OpenApi;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PedeLogo.Catalogo.Api.Config;
@@ -75,8 +74,6 @@ namespace PedeLogo.Catalogo.Api
 
             app.UseRouting();
 
-            app.UseHttpMetrics();
-
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapHealthChecks("/health");
@@ -85,7 +82,6 @@ namespace PedeLogo.Catalogo.Api
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapMetrics();
                 endpoints.MapGet("/read", async context =>
                 {
                     if (ConfigManager.IsRead())

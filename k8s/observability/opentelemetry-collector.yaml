@@ -12,14 +12,6 @@ spec:
             endpoint: 0.0.0.0:4317
           http:
             endpoint: 0.0.0.0:4318
-      prometheus:
-        config:
-          scrape_configs:
-            - job_name: catalogo-api
-              scrape_interval: 15s
-              metrics_path: /metrics
-              static_configs:
-                - targets: [api-service:80]
     processors:
       memory_limiter:
         check_interval: 1s
@@ -38,7 +30,7 @@ spec:
           processors: [memory_limiter]
           exporters: [debug]
         metrics:
-          receivers: [otlp, prometheus]
+          receivers: [otlp]
           processors: [memory_limiter]
           exporters: [debug, prometheus]
         logs:
