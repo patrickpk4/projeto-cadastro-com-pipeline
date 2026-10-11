@@ -5,6 +5,12 @@ metadata:
 spec:
   exporter:
     endpoint: http://opentelemetry-collector:4317
+  dotnet:
+    env:
+      - name: OTEL_METRICS_EXPORTER
+        value: otlp
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: grpc
   propagators:
     - tracecontext
     - baggage
