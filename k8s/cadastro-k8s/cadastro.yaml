@@ -51,6 +51,14 @@ spec:
             - containerPort: 443
               name: https
           imagePullPolicy: Always
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTP
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /read
