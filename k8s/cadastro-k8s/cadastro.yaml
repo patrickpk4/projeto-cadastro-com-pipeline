@@ -2,8 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-deployment
-  annotations:
-    instrumentation.opentelemetry.io/inject-dotnet: "true"
 spec:
   replicas: 1
   strategy:
@@ -18,6 +16,8 @@ spec:
     metadata:
       labels:
         app: api
+      annotations:
+        instrumentation.opentelemetry.io/inject-dotnet: "true"  
     spec:
       serviceAccountName: catalogo-service-account
       initContainers:
@@ -38,11 +38,11 @@ spec:
           image: ghcr.io/patrickpk4/projeto-cadastro-com-pipeline/catalogo-api:IMAGE_TAG
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "50m"
+              memory: "256Mi"
+              cpu: "200m"
             limits:
-              memory: "128Mi"
-              cpu: "70m"
+              memory: "384Mi"
+              cpu: "500m"
           ports:
             - containerPort: 8080
               name: http
@@ -64,7 +64,7 @@ spec:
               scheme: HTTP
             periodSeconds: 5
             timeoutSeconds: 2
-            failureThreshold: 5
+            failureThreshold: 30
           envFrom:
             - configMapRef:
                 name: catalogo-config

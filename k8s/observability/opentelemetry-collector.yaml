@@ -4,6 +4,11 @@ metadata:
   name: opentelemetry-collector
 spec:
   image: otel/opentelemetry-collector-contrib:0.160.0 
+  ports:
+    - name: prometheus
+      port: 8889
+      targetPort: 8889
+      protocol: TCP
   config:
     receivers:
       otlp:
@@ -17,11 +22,14 @@ spec:
         check_interval: 1s
         limit_percentage: 75
         spike_limit_percentage: 15
+      batch: {}  
     exporters:
       debug:
         verbosity: basic
       prometheus:
-       endpoint: 0.0.0.0:9090
+        endpoint: 0.0.0.0:8889
+        resource_to_telemetry_conversion:
+          enabled: true
 
     service:
       pipelines:
