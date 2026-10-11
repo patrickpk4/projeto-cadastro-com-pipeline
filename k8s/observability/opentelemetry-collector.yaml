@@ -6,7 +6,8 @@ spec:
   image: otel/opentelemetry-collector-contrib:0.160.0 
   ports:
     - name: prometheus
-      containerPort: 8889
+      port: 8889
+      targetPort: 8889
       protocol: TCP
   config:
     receivers:
