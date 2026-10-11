@@ -1,7 +1,7 @@
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
-  name: demo
+  name: opentelemetry-collector
 spec:
   image: otel/opentelemetry-collector-contrib:0.160.0 
   config:
@@ -21,7 +21,7 @@ spec:
       debug:
         verbosity: basic
       prometheus:
-       endpoint: 0.0.0.0:8889  
+       endpoint: 0.0.0.0:9090
 
     service:
       pipelines:
