@@ -1,13 +1,13 @@
-ApiVersion: monitoring.coreos.com/v1
-Kind: ServiceMonitor
-Metadata:
-  Name: opentelemetry-service-monitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: opentelemetry-service-monitor
   namespace: default
-Spec:
-  Selector:
-    MatchLabels:
+spec:
+  selector:
+    matchLabels:
       app.kubernetes.io/instance: opentelemetry-collector
       operator.opentelemetry.io/collector-service-type: base
-  Endpoints:
-    - Port: prometheus
+  endpoints:
+    - port: prometheus
       interval: 30s
