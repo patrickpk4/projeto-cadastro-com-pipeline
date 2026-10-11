@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-deployment
+  annotations:
+    instrumentation.opentelemetry.io/inject-dotnet: "true"
 spec:
   replicas: 1
   strategy:
