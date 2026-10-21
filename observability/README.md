@@ -1,5 +1,7 @@
 # Observabilidade
 
+
+
 ## Fluxo de métricas
 
 ```text
