@@ -15,3 +15,24 @@ prometheus:
     #        requests:
     #          storage: 20Gi
     # para teste sem EBS CSI, remova o storageSpec (usa emptyDir, perde dados ao reiniciar)
+
+grafana:
+  enabled: true
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+    datasources:
+      enabled: true
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          uid: prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus-operated:9090
+          isDefault: true
+          editable: false

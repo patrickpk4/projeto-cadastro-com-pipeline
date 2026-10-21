@@ -78,30 +78,15 @@ Infraestrutura AWS Provisionada por Terraform
 
 ```text
 .
-├── .github
-│   └── workflows
-│       ├── terraform.yml
-│       ├── tf_validate.yaml
-│       ├── tf_plan_stag.yaml
-│       ├── tf_plan_prod.yaml
-│       ├── tf_apply_stag.yaml
-│       ├── tf_apply_prod.yaml
-│       └── dotnet-build.yml
-│
-├── infra
-│   └── env
-│       ├── staging
-│       └── production
-│
+├── .github/workflows/       # Workflows de CI/CD
+├── infra/                   # Terraform e variáveis dos ambientes
 ├── src
-│   └── PedeLogo.Catalogo.Api
-│
-├── tests
-│   ├── PedeLogo.Catalogo.UnitTests
-│   └── PedeLogo.Catalogo.IntegrationTests
-│
-└── k8s
-    └── cadastro-k8s
+│   ├── PedeLogo.Catalogo.Api/
+│   └── tests/               # Testes unitários e de integração
+├── k8s/                     # Manifestos da aplicação e do MongoDB
+├── observability/           # OpenTelemetry, Prometheus e dashboards Grafana
+├── testeEks/                # Manifestos usados nos testes do cluster
+└── readme.md
 ```
 
 ---
