@@ -1,751 +1,254 @@
 # PedeLogo Catálogo
 
-## Visão Geral
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![Amazon EKS](https://img.shields.io/badge/Amazon-EKS-FF9900?logo=amazoneks&logoColor=white)](https://aws.amazon.com/eks/)
+[![Terraform](https://img.shields.io/badge/Terraform-%3E%3D%201.7-844FBA?logo=terraform&logoColor=white)](https://www.terraform.io/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-4.4.0-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Docker](https://img.shields.io/badge/Container-GHCR-2496ED?logo=docker&logoColor=white)](https://github.com/features/packages)
+[![OpenTelemetry](https://img.shields.io/badge/Observability-OpenTelemetry-000000?logo=opentelemetry&logoColor=white)](https://opentelemetry.io/)
+[![Prometheus](https://img.shields.io/badge/Metrics-Prometheus-E6522C?logo=prometheus&logoColor=white)](https://prometheus.io/)
+[![Grafana](https://img.shields.io/badge/Dashboards-Grafana-F46800?logo=grafana&logoColor=white)](https://grafana.com/)
 
-O PedeLogo Catálogo é uma aplicação desenvolvida em .NET 8 executada em Kubernetes na AWS utilizando Amazon EKS.
+Projeto de referência para desenvolvimento e operação de uma API de catálogo de produtos com **.NET 8**, **MongoDB** e **Kubernetes na AWS (Amazon EKS)**. O repositório reúne a aplicação, infraestrutura como código, manifests Kubernetes, automação CI/CD e configuração de observabilidade.
 
-Toda a infraestrutura é provisionada com Terraform e o ciclo completo de entrega é automatizado através de GitHub Actions.
+> **Estado do projeto:** projeto de estudo e referência técnica. 
 
-O projeto segue práticas modernas de:
+## Índice
 
-* DevOps
-* GitOps
-* Infrastructure as Code (IaC)
-* Continuous Integration (CI)
-* Continuous Delivery (CD)
-* Cloud Native Architecture
+- [Visão geral](#visão-geral)
+- [Arquitetura](#arquitetura)
+- [Tecnologias](#tecnologias)
+- [Estrutura do repositório](#estrutura-do-repositório)
+- [Executar localmente](#executar-localmente)
+- [Testes](#testes)
+- [Infraestrutura AWS com Terraform](#infraestrutura-aws-com-terraform)
+- [Aplicação no Kubernetes](#aplicação-no-kubernetes)
+- [Observabilidade](#observabilidade)
+- [CI/CD](#cicd)
+- [Segurança e operação](#segurança-e-operação)
+- [Documentação relacionada](#documentação-relacionada)
 
----
+## Visão geral
 
-# Arquitetura da Solução
+A API permite consultar, cadastrar, atualizar e remover produtos armazenados no MongoDB. O serviço é empacotado em uma imagem Docker e implantado no EKS. A infraestrutura AWS é descrita em Terraform, e os workflows do GitHub Actions automatizam verificações, build, publicação de imagem e implantação.
 
-A solução é composta por quatro camadas principais:
+### Funcionalidades da API
 
-```text
-Aplicação .NET 8
-        │
-        ▼
-Docker
-        │
-        ▼
-Amazon EKS
-        │
-        ▼
-Infraestrutura AWS Provisionada por Terraform
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/Produto` | Lista os produtos |
+| `GET` | `/Produto/{id}` | Consulta produto pelo identificador MongoDB |
+| `POST` | `/Produto` | Cadastra um produto |
+| `PUT` | `/Produto/{id}` | Atualiza um produto |
+| `DELETE` | `/Produto?id={id}` | Remove produto pelo parâmetro `id` |
+| `GET` | `/health` | Health check da aplicação |
+| `GET` | `/read` | Readiness check usado pelo Kubernetes |
+| `GET` | `/metrics` | Métricas expostas pelo `prometheus-net` |
+| `GET` | `/swagger/index.html` | Interface Swagger/OpenAPI |
+
+Consulte o Swagger do ambiente para ver o contrato publicado pela versão atualmente implantada.
+
+## Arquitetura
+
+```mermaid
+flowchart LR
+    Client[Cliente / Swagger] --> LB[Service LoadBalancer]
+    LB --> API[Deployment .NET 8]
+    API --> DB[Service headless]
+    DB --> Mongo[StatefulSet MongoDB]
+
+    API -. OTLP HTTP :4318 .-> Collector[OpenTelemetry Collector]
+    Collector -. Prometheus scrape :8889 .-> Prom[Prometheus]
+    Prom --> Grafana[Grafana dashboards]
+
+    Terraform[Terraform] --> AWS[VPC e Amazon EKS]
+    Actions[GitHub Actions] --> GHCR[GitHub Container Registry]
+    GHCR --> API
+    Actions --> AWS
 ```
 
----
+### Fluxo de métricas
 
-# Tecnologias Utilizadas
+```text
+API .NET 8
+  -> instrumentação automática OpenTelemetry
+  -> OTLP HTTP :4318
+  -> OpenTelemetry Collector
+  -> exporter Prometheus :8889
+  -> ServiceMonitor
+  -> Prometheus
+  -> dashboard Grafana
+```
 
-## Aplicação
+## Tecnologias
 
-* .NET 8
-* ASP.NET Core
-* MongoDB
-* xUnit
+| Área | Componentes usados |
+|---|---|
+| Aplicação | .NET 8, ASP.NET Core, MongoDB.Driver, `prometheus-net.AspNetCore` |
+| Banco de dados | MongoDB 4.4.0 |
+| Containers | Docker; imagens da API publicadas no GitHub Container Registry (GHCR) |
+| Orquestração | Kubernetes no Amazon EKS; Deployments, StatefulSets, Services, HPAs, RBAC e NetworkPolicies |
+| Infraestrutura | Terraform >= 1.7; AWS Provider `~> 6.67`; módulos AWS VPC 6.7.3 e EKS `~> 21.0` |
+| Observabilidade | OpenTelemetry Operator e Collector Contrib 0.160.0, Prometheus, Grafana e `kube-prometheus-stack` chart 92.3.0 |
+| CI/CD e qualidade | GitHub Actions, xUnit, SonarCloud, Trivy, Checkov |
 
-## Containers
+As versões declaradas podem evoluir. Consulte os manifests, arquivos de projeto e workflows para a configuração efetivamente aplicada.
 
-* Docker
-* Docker Hub
-
-## Kubernetes
-
-* Amazon EKS
-* kubectl
-
-## Infraestrutura
-
-* Terraform
-* AWS
-
-## Qualidade e Segurança
-
-* SonarCloud
-* TFLint
-* tfsec
-* Checkov
-* Infracost
-
-## CI/CD
-
-* GitHub Actions
-
----
-
-# Estrutura do Projeto
+## Estrutura do repositório
 
 ```text
 .
-├── .github/workflows/       # Workflows de CI/CD
-├── infra/                   # Terraform e variáveis dos ambientes
-├── src
+├── .github/
+│   └── workflows/       # CI/CD da aplicação, Terraform e teste do cluster
+├── infra/               # Terraform da VPC e do EKS; variáveis por ambiente
+├── k8s/
+│   ├── cadastro-k8s/    # API: Deployment, Service, HPA, RBAC e configuração
+│   ├── mongodb-k8s/     # MongoDB: StatefulSet, Service, HPA e RBAC
+│   └── README.md        # Guia de workloads Kubernetes
+├── observability/       # OpenTelemetry, Prometheus, Grafana e script de tráfego
+│   └── README.md        # Guia de implantação e diagnóstico da observabilidade
+├── src/
 │   ├── PedeLogo.Catalogo.Api/
-│   └── tests/               # Testes unitários e de integração
-├── k8s/                     # Manifestos da aplicação e do MongoDB
-├── observability/           # OpenTelemetry, Prometheus e dashboards Grafana
-├── testeEks/                # Manifestos usados nos testes do cluster
+│   ├── PedeLogo.Catalogo.sln
+│   └── tests/
+│       ├── PedeLogo.Catalogo.UnitTests/
+│       └── PedeLogo.Catalogo.IntegrationTests/
+├── testeEks/            # Manifest usado no teste de comunicação de pods
 └── readme.md
 ```
 
----
+## Executar localmente
 
-# Infraestrutura AWS
+### Pré-requisitos
 
-A infraestrutura é provisionada através do Terraform utilizando módulos oficiais da AWS.
+- .NET SDK 8.x
+- Docker, para executar MongoDB localmente
+- Git
 
-## Recursos Provisionados
+### 1. Iniciar o MongoDB local
 
-### VPC
-
-A VPC é criada utilizando o módulo oficial:
-
-```text
-terraform-aws-modules/vpc/aws
-```
-
-Recursos:
-
-* VPC
-* Internet Gateway
-* NAT Gateway
-* VPN Gateway
-* Route Tables
-* Subnets Públicas
-* Subnets Privadas
-
----
-
-### Amazon EKS
-
-O cluster Kubernetes é criado utilizando:
-
-```text
-terraform-aws-modules/eks/aws
-```
-
-Recursos:
-
-* Cluster Kubernetes
-* Managed Node Groups
-* IAM Roles
-* Security Groups
-* Endpoint Público
-* Endpoint Privado
-
----
-
-### Add-ons Instalados
-
-* CoreDNS
-* kube-proxy
-* VPC CNI
-* EKS Pod Identity Agent
-
----
-
-### Ambientes
-
-A infraestrutura é separada em:
-
-```text
-staging
-production
-```
-
-Cada ambiente possui:
-
-* Terraform State independente
-* Variáveis independentes
-* Backend remoto independente
-* Cluster Kubernetes independente
-
----
-
-# Fluxo de Desenvolvimento
-
-O fluxo adotado utiliza três tipos principais de branches.
-
-```text
-feature/*
-     │
-     ▼
- staging
-     │
-     ▼
-  main
-```
-
----
-
-## Feature Branch
-
-Desenvolvimento de novas funcionalidades.
-
-Exemplo:
-
-```text
-feature/criar-endpoint-produtos
-```
-
----
-
-## Staging
-
-Ambiente de homologação.
-
-Utilizado para:
-
-* Testes integrados
-* Validação funcional
-* Homologação
-
----
-
-## Main
-
-Ambiente produtivo.
-
-Toda alteração na main é considerada pronta para produção.
-
----
-
-# Pipeline de Infraestrutura
-
-Arquivo principal:
-
-```text
-.github/workflows/terraform.yml
-```
-
-Responsável por:
-
-* Validação
-* Segurança
-* Estimativa de custos
-* Terraform Plan
-* Terraform Apply
-
----
-
-## Pull Request
-
-Quando um Pull Request é aberto para a branch main:
-
-```text
-feature/*
-       │
-       ▼
-Pull Request
-       │
-       ▼
-main
-```
-
-Executa:
-
-* Terraform Format
-* Terraform Validate
-* TFLint
-* tfsec
-* Checkov
-* Infracost
-* Terraform Plan
-
-Nenhuma alteração é aplicada.
-
----
-
-## Push para Staging
-
-Executa:
-
-* Validate
-* Security Scan
-* Infracost
-* Terraform Plan
-
-Sem deploy.
-
----
-
-## Criação de Tag
-
-Exemplo:
-
-```text
-v1.0.0
-```
-
-Executa:
-
-* Validate
-* Security
-* Infracost
-* Plan Staging
-* Apply Staging
-
-Permite homologação da infraestrutura.
-
----
-
-## Push para Main
-
-Executa:
-
-* Validate
-* Security
-* Infracost
-* Plan Production
-* Apply Production
-
----
-
-# Validações Terraform
-
-## Terraform Format
+Os valores abaixo são apenas para desenvolvimento local e correspondem aos defaults do `appsettings.json`. Não reutilize essas credenciais em ambientes compartilhados ou produção.
 
 ```bash
-terraform fmt -check -recursive
+docker run --detach \
+  --name catalogo-mongodb \
+  --publish 27017:27017 \
+  --env MONGO_INITDB_ROOT_USERNAME=mongouser \
+  --env MONGO_INITDB_ROOT_PASSWORD=mongopwd \
+  mongo:4.4.0
 ```
 
-Valida padronização do código.
-
----
-
-## Terraform Validate
+### 2. Restaurar dependências e iniciar a API
 
 ```bash
+dotnet restore src/PedeLogo.Catalogo.sln
+dotnet run --project src/PedeLogo.Catalogo.Api/PedeLogo.Catalogo.Api.csproj
+```
+
+O perfil do projeto declara `http://localhost:5000` e `https://localhost:5001`. Abra o Swagger em <http://localhost:5000/swagger/index.html>.
+
+Para encerrar e remover o container local do banco:
+
+```bash
+docker stop catalogo-mongodb
+docker rm catalogo-mongodb
+```
+
+## Testes
+
+Executar os projetos de teste individualmente:
+
+```bash
+dotnet test src/tests/PedeLogo.Catalogo.UnitTests/PedeLogo.Catalogo.UnitTests.csproj
+dotnet test src/tests/PedeLogo.Catalogo.IntegrationTests/PedeLogo.Catalogo.IntegrationTests.csproj
+```
+
+Os testes de integração dependem de uma instância MongoDB disponível. A pipeline de integração configura MongoDB 4.4.0 como serviço e fornece as credenciais por GitHub Secrets.
+
+Executar todos os testes da solução:
+
+```bash
+dotnet test src/PedeLogo.Catalogo.sln
+```
+
+## Infraestrutura AWS com Terraform
+
+O código em [`infra/`](./infra/) provisiona uma VPC e um cluster Amazon EKS usando os módulos comunitários da AWS:
+
+- VPC com subnets públicas e privadas, NAT Gateway e VPN Gateway.
+- EKS com endpoints público e privado habilitados.
+- Managed Node Group com tamanho mínimo 2, desejado 2 e máximo 4 nós.
+- Add-ons CoreDNS, kube-proxy, VPC CNI e EKS Pod Identity Agent.
+- Kubernetes configurado nos arquivos de ambiente com versão `1.35`.
+
+Os valores de ambientes estão em `infra/staging.tfvars` e `infra/prod.tfvars`; bucket, chave e credenciais do backend remoto são fornecidos pela configuração dos workflows. Não inclua credenciais ou valores sensíveis em commits.
+
+Os comandos locais de validação, dentro de `infra/`, são:
+
+```bash
+terraform init -backend=false
+terraform fmt -check
 terraform validate
 ```
 
-Valida sintaxe e consistência.
+Para criar ou modificar infraestrutura, confira o ambiente/contexto, backend e plano antes de executar `terraform apply`. A automação usa os ambientes e permissões configurados no GitHub Actions.
 
----
+## Aplicação no Kubernetes
 
-## TFLint
+A API e o MongoDB são implantados no namespace `default`. A API fica disponível por um Service `LoadBalancer` na porta 80; o MongoDB é acessível internamente por um Service headless na porta 27017.
 
-Executa verificações de boas práticas.
+O manifesto da API contém `IMAGE_TAG` como placeholder. Para deployment manual, use uma tag já publicada no GHCR e verifique o Secret de pull `ghcr-secret`; a pipeline injeta a imagem construída para o commit. O MongoDB usa StatefulSet, probes de saúde, recursos requests/limits e políticas de rede.
 
-Exemplos:
+Guia de pré-requisitos, implantação, configuração, autoscaling e diagnóstico: [`k8s/README.md`](./k8s/README.md).
 
-* Recursos mal configurados
-* Variáveis não utilizadas
-* Configurações inválidas
+## Observabilidade
 
----
+A configuração em [`observability/`](./observability/) instrumenta a API com OpenTelemetry, exporta métricas para Prometheus e disponibiliza um dashboard Grafana. O dashboard apresenta taxa de requisições, latência, respostas 5xx e métricas por rota.
 
-## tfsec
+Guia completo de implantação do stack, instrumentação, acesso por port-forward, geração de tráfego e troubleshooting: [`observability/README.md`](./observability/README.md).
 
-Executa análise de segurança.
+## CI/CD
 
-Verifica:
+Os workflows ficam em `.github/workflows/`. O comportamento abaixo resume os gatilhos definidos nos arquivos atuais:
 
-* Recursos inseguros
-* Configurações públicas indevidas
-* Falhas conhecidas
+| Fluxo | Gatilho/escopo | Etapas principais |
+|---|---|---|
+| Testes da aplicação (`App_testeEstatico.yaml`) | Push para `feature/**`, `hotfix/**` ou `main`, e PR para `main`; alterações em `src/**` | Testes unitários, integração com MongoDB, cobertura e análise SonarCloud |
+| Build de imagem (`App_CI.yaml`) | Reutilizável; chamado pelo workflow de testes em PR após os jobs de qualidade | Build Docker, scan Trivy para vulnerabilidades CRITICAL e push ao GHCR com tags do commit e `latest` |
+| CD da aplicação (`App_CD.yaml`, `App_CD_prod.yaml`) | Workflows reutilizáveis chamados pelo fluxo da aplicação | Deploy dos manifests no EKS com a imagem do commit; configurações usam GitHub Environments `staging` e `production` |
+| Validação Terraform (`infra_teste_Statico.yaml`) | Push para `feature/**` ou `hotfix/**`; alterações em `infra/**` | `terraform init -backend=false`, validate, fmt e Checkov (configurado como soft-fail) |
+| Plan e deploy staging (`infra_CI.yaml`, `infra_CD.yaml`) | PR para `main`; alterações em `infra/**` | Gera plano, aplica o artefato em staging e executa teste de cluster |
+| Plan e deploy production (`infra_CI_Prod.yaml`, `infra_CD_Prod.yaml`) | Push para `main`; alterações em `infra/**` | Gera plano e executa apply em production |
 
----
+> Revise os gatilhos dos workflows e as proteções dos GitHub Environments antes de adotar a pipeline em produção. A aprovação manual depende da configuração dos environments no GitHub; ela não é garantida apenas pelo nome do ambiente no YAML.
 
-## Checkov
+### Configuração necessária no GitHub
 
-Executa análise de compliance.
+Os workflows dependem de configurações em **Settings → Secrets and variables → Actions** e de environments `staging` e `production`. Entre os nomes referenciados pelos workflows estão:
 
-Resultados enviados para:
+- Secrets: `AWS_ROLE`, `BUCKET`, `KEY`, `TF_VARS`, `mongo_user`, `mongo_pwd`, `SONAR_PROJECT_KEY`, `SONAR_ORGANIZATION`, `SONAR_TOKEN`.
+- Variables: `REGION`, `CLUSTER_NAME`, `TF_VERSION`.
 
-```text
-GitHub Security
-```
+Configure as credenciais AWS via OIDC conforme os workflows e limite permissões às funções necessárias. Os valores reais devem ser definidos no GitHub, nunca copiados para documentação ou commits.
 
----
+## Segurança e operação
 
-## Infracost
+- Os valores Base64 de Kubernetes Secrets **não são criptografia**. Os Secrets de exemplo nos manifests não devem ser tratados como credenciais seguras; substitua-os e rotacione qualquer credencial que tenha sido usada em um cluster compartilhado.
+- Prefira AWS Secrets Manager/External Secrets ou geração de Secrets fora do repositório para ambientes reais.
+- Revise exposição do LoadBalancer, autenticação/autorização da API, NetworkPolicies e regras de Security Groups antes de produção.
+- O `kube-prometheus-stack` está configurado com retenção Prometheus de 1 dia e armazenamento efêmero (`emptyDir`); métricas podem ser perdidas quando o pod reinicia.
+- Configure backup e persistência apropriados para dados MongoDB antes de uso produtivo.
+- Proteja o acesso aos dashboards e ao endpoint Prometheus. O port-forward é recomendado para acesso local de operação.
 
-Calcula o impacto financeiro das alterações.
+## Documentação relacionada
 
-Exibe:
+- [Kubernetes: arquitetura, deploy e troubleshooting](./k8s/README.md)
+- [Observabilidade: OpenTelemetry, Prometheus e Grafana](./observability/README.md)
+- [Workflows de CI/CD](./.github/workflows/)
+- [Infraestrutura Terraform](./infra/)
 
-* Recursos criados
-* Recursos alterados
-* Custo estimado mensal
+## Autor
 
----
+**Patrick Amorim** — [@patrickpk4](https://github.com/patrickpk4)
 
-# Deploy da Infraestrutura
-
-## Staging
-
-Executado automaticamente após criação de tag.
-
-Fluxo:
-
-```text
-Plan
-   │
-   ▼
-Apply Staging
-```
-
----
-
-## Production
-
-Executado após merge para main.
-
-Fluxo:
-
-```text
-Plan Production
-        │
-        ▼
-Aprovação Manual
-        │
-        ▼
-Apply Production
-```
-
-A aprovação é controlada através de GitHub Environments.
-
----
-
-# Pipeline da Aplicação
-
-Arquivo:
-
-```text
-.github/workflows/dotnet-build.yml
-```
-
-Responsável por:
-
-* Build
-* Testes
-* SonarCloud
-* Docker Build
-* Docker Push
-* Deploy Kubernetes
-
----
-
-# Etapa 1 - Build
-
-Executa:
-
-```bash
-dotnet restore
-dotnet build
-```
-
-Objetivo:
-
-* Restaurar dependências
-* Compilar a aplicação
-
----
-
-# Etapa 2 - Testes Unitários
-
-Executa:
-
-```bash
-dotnet test
-```
-
-Valida:
-
-* Regras de negócio
-* Métodos isolados
-* Cobertura de código
-
----
-
-# Etapa 3 - SonarCloud
-
-Executa análise estática.
-
-Valida:
-
-* Bugs
-* Vulnerabilidades
-* Code Smells
-* Cobertura
-
----
-
-# Etapa 4 - Testes de Integração
-
-Executados utilizando MongoDB temporário.
-
-Container utilizado:
-
-```text
-mongo:4.4
-```
-
-Valida:
-
-* Integração com banco de dados
-* Fluxos completos da aplicação
-
----
-
-# Etapa 5 - Build da Imagem Docker
-
-Após aprovação dos testes.
-
-Executa:
-
-```bash
-docker build
-```
-
-Utilizando o Dockerfile da API.
-
----
-
-# Etapa 6 - Publicação Docker Hub
-
-Publica duas versões:
-
-```text
-catalogo:latest
-catalogo:<commit_sha>
-```
-
-Exemplo:
-
-```text
-catalogo:4d9f3f9
-```
-
-Permite rastreabilidade completa entre código e imagem.
-
----
-
-# Deploy Kubernetes
-
-Após publicação da imagem.
-
----
-
-## Identificação do Ambiente
-
-A pipeline identifica automaticamente:
-
-```text
-staging
-production
-```
-
-de acordo com a branch.
-
----
-
-## Atualização do kubeconfig
-
-Executa:
-
-```bash
-aws eks update-kubeconfig
-```
-
-Conectando ao cluster correto.
-
----
-
-## Atualização da Imagem
-
-A imagem utilizada pelo Deployment é substituída pela versão do commit.
-
-Exemplo:
-
-```text
-catalogo:4d9f3f9
-```
-
----
-
-## Aplicação dos Manifestos
-
-Executa:
-
-```bash
-kubectl apply -f k8s/ -R
-```
-
----
-
-## Verificação do Rollout
-
-Executa:
-
-```bash
-kubectl rollout status
-```
-
-Garantindo que a nova versão esteja saudável.
-
----
-
-## Rollback Automático
-
-Em caso de falha:
-
-```bash
-kubectl rollout undo
-```
-
-A aplicação retorna para a versão anterior.
-
----
-
-# Segurança
-
-A autenticação AWS utiliza OIDC.
-
-Fluxo:
-
-```text
-GitHub Actions
-       │
-       ▼
-OIDC
-       │
-       ▼
-AWS IAM Role
-       │
-       ▼
-AWS Resources
-```
-
-Não são utilizadas Access Keys permanentes.
-
-Benefícios:
-
-* Credenciais temporárias
-* Menor risco de vazamento
-* Rotação automática
-* Melhor auditoria
-
----
-
-# Secrets Utilizados
-
-## Infraestrutura
-
-```text
-AWS_ROLE
-TFVARS
-TFVARS_PROD
-BUCKET
-BUCKET_PROD
-KEY
-KEY_PROD
-INFRACOST_API_KEY
-```
-
-## Aplicação
-
-```text
-SONAR_TOKEN
-SONAR_PROJECT_KEY
-SONAR_ORGANIZATION
-DOCKER_USER
-DOCKER_TOKEN
-MONGO_CONNECTION_STRING
-AWS_ROLE
-```
-
----
-
-# Fluxo Completo da Entrega
-
-```text
-Desenvolvedor
-      │
-      ▼
-Feature Branch
-      │
-      ▼
-Pull Request
-      │
-      ▼
-Terraform Validate
-      │
-      ▼
-Security Scan
-      │
-      ▼
-Infracost
-      │
-      ▼
-Terraform Plan
-      │
-      ▼
-Merge
-
-──────────────────────────────────
-
-Push Staging
-      │
-      ▼
-Build
-      │
-      ▼
-Testes
-      │
-      ▼
-SonarCloud
-      │
-      ▼
-Docker Build
-      │
-      ▼
-Docker Push
-      │
-      ▼
-Deploy EKS Staging
-
-──────────────────────────────────
-
-Push Main
-      │
-      ▼
-Terraform Plan Production
-      │
-      ▼
-Aprovação Manual
-      │
-      ▼
-Terraform Apply Production
-      │
-      ▼
-Build
-      │
-      ▼
-Testes
-      │
-      ▼
-Docker Build
-      │
-      ▼
-Docker Push
-      │
-      ▼
-Deploy EKS Production
-```
-
----
-
-# Objetivos do Projeto
-
-* Automatizar o provisionamento da infraestrutura
-* Garantir qualidade de código através de testes automatizados
-* Aplicar validações de segurança em todas as mudanças
-* Controlar custos de infraestrutura antes do deploy
-* Automatizar publicação de imagens Docker
-* Automatizar deploy em Kubernetes
-* Garantir rastreabilidade entre código, imagem e ambiente
-* Implementar um fluxo seguro para promoção entre Staging e Production
-* Reduzir riscos operacionais através de validações e aprovações automatizadas
+Projeto de estudo e referência técnica para desenvolvimento, infraestrutura e operação cloud-native.
