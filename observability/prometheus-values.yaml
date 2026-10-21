@@ -25,14 +25,3 @@ grafana:
       labelValue: "1"
     datasources:
       enabled: true
-  datasources:
-    datasources.yaml:
-      apiVersion: 1
-      datasources:
-        - name: Prometheus
-          uid: prometheus
-          type: prometheus
-          access: proxy
-          url: http://prometheus-operated:9090
-          isDefault: true
-          editable: false
