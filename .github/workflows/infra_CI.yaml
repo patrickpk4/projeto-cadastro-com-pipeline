@@ -9,7 +9,6 @@ on:
 
 jobs:
   Plan_Staging: 
-    environment: staging
     permissions:
       id-token: write
       contents: read
