@@ -9,7 +9,8 @@ module "vpc" {
 }
 
 module "network" {
-  source            = "./modules/network"
-  vpc_id            = module.vpc["hub"].vpc_id
-  public_subnet_ids = module.vpc["hub"].public_subnet_ids
+  source             = "./modules/network"
+  vpc_id             = module.vpc["hub"].vpc_id
+  public_subnet_ids  = module.vpc["hub"].public_subnet_ids
+  private_subnet_ids = module.vpc["hub"].private_subnet_ids
 }
