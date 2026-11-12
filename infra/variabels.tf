@@ -5,9 +5,9 @@ variable "aws_region" {
 # armazena a configuração de múltiplos blocos VPC
 variable "vpcs" {
   type = map(object({
-    cidr_block         = string
-    availability_zones = list(string)
-    public_subnets_cidr     = list(string)
-    private_subnets_cidr    = list(string)
+    cidr_block           = string
+    availability_zones   = list(string)
+    public_subnets_cidr  = list(string)
+    private_subnets_cidr = list(string)
   }))
 }
