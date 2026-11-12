@@ -17,7 +17,7 @@ spec:
       labels:
         app: api
       annotations:
-        instrumentation.opentelemetry.io/inject-dotnet: "true"  
+        instrumentation.opentelemetry.io/inject-dotnet: "instrumentador"
     spec:
       serviceAccountName: catalogo-service-account
       initContainers:

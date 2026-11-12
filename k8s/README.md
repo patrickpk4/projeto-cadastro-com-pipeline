@@ -1,237 +1,158 @@
+# Kubernetes
 
-# Kubernetes Catálogo App - MongoDB & .NET Core
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-EKS-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![API](https://img.shields.io/badge/API-.NET%208-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-4.4.0-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Deployment](https://img.shields.io/badge/Deployment-Kubernetes%20manifests-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/docs/concepts/workloads/)
 
-Uma aplicação completa de catálogo implementada em **Kubernetes** com **MongoDB** e **.NET Core**, demonstrando boas práticas de orquestração de containers, auto-escalonamento e persistência de dados.
+Este diretório contém os manifests Kubernetes da API PedeLogo Catálogo e do MongoDB. As configurações de OpenTelemetry, Prometheus e Grafana estão separadas em [`../observability/`](../observability/README.md); os manifests auxiliares do teste do cluster estão em [`../testeEks/`](../testeEks/).
 
----
+## Componentes e arquitetura
 
-## Arquitetura
-
-- **api-app**: Contém a API .NET Core, seus Secrets, ServiceAccount, Role, RoleBinding e HPA.
-- **data-base**: Contém o MongoDB como StatefulSet, seu Secret, Headless Service, Role, RoleBinding e HPA.
-
----
-
-## Estrutura do Projeto
-
+```text
+Cliente
+  -> Service api-service (LoadBalancer :80)
+  -> Deployment api-deployment (.NET 8, container :8080)
+  -> Service mongo-service (headless :27017)
+  -> StatefulSet mongodb-statefulset (MongoDB 4.4.0)
 ```
-catalogo-kubernetes/
-├── api-app/
-│   ├── catalogo.yaml
-│   ├── service-catalogo.yaml
-│   ├── secret-catalogo.yaml
-│   ├── serviceaccount-catalogo.yaml
-│   ├── role-catalogo.yaml
-│   ├── rolebinding-catalogo.yaml
-│   ├── hpa-catalogo.yaml
-│   └── networkpolicy-catalogo.yaml
-├── data-base/
-│   ├── mongodb.yaml
-│   ├── service-mongodb.yaml
-│   ├── secret-mongodb.yaml
-│   ├── serviceaccount-mongodb.yaml
-│   ├── role-mongodb.yaml
-│   ├── rolebinding-mongodb.yaml
-│   ├── hpa-mongodb.yaml
-│   └── networkpolicy-mongodb.yaml
-├
-│   
+
+| Componente | Recurso | Configuração |
+|---|---|---|
+| API de catálogo | Deployment `api-deployment` | 1 réplica inicial; imagem publicada no GHCR; probes `/read` e `/health`; recursos requests 200m CPU/256Mi e limits 500m CPU/384Mi |
+| Acesso à API | Service `api-service` | Tipo `LoadBalancer`, porta 80 para a porta 8080 do container |
+| Banco | StatefulSet `mongodb-statefulset` | MongoDB 4.4.0, 1 réplica, porta 27017, startup/readiness/liveness probes e recursos definidos |
+| Acesso ao banco | Service `mongo-service` | Headless Service, porta 27017, descoberta interna no namespace `default` |
+| Configuração da API | ConfigMap `catalogo-config` | Host, porta e nome do banco MongoDB |
+| Escala | HPAs `api-autoscaling` e `mongodb-hpa` | Autoscaling por CPU/memória; API de 1 a 10 réplicas |
+| Segurança de rede | NetworkPolicies para API e MongoDB | Regras de tráfego entre API, banco e DNS |
+| Acesso a recursos | ServiceAccounts, Roles e RoleBindings | Controles RBAC separados para API e banco |
+
+Os manifests usam o namespace `default` quando não especificam um namespace.
+
+## Estrutura
+
+```text
+k8s/
+├── cadastro-k8s/   # Deployment, Service, ConfigMap, Secret, HPA, RBAC e NetworkPolicy da API
+├── mongodb-k8s/    # StatefulSet, Service, Secret, HPA, RBAC e NetworkPolicy do MongoDB
 └── README.md
 ```
 
----
+## Pré-requisitos
 
-## Componentes Principais
+- `kubectl` configurado para o cluster EKS correto.
+- Permissão para criar/atualizar workloads, Services, Secrets, RBAC, NetworkPolicies e HPAs.
+- Um controlador AWS que provisione Services do tipo `LoadBalancer`.
+- Metrics Server para que os HPAs obtenham métricas de CPU e memória.
+- Suporte a NetworkPolicy no plugin de rede do cluster para que as políticas tenham efeito.
+- Uma imagem da API publicada no GHCR e credenciais necessárias para baixá-la.
 
-| Componente | Tecnologia | Função |
-|-------------|-------------|--------|
-| **API Backend** | .NET Core 6.0 | API REST do catálogo |
-| **Database** | MongoDB 4.4 | Armazenamento de dados |
-| **Orquestração** | Kubernetes | Orquestração de containers |
-| **Armazenamento** | NFS | Persistência de dados |
-| **Networking** | Calico | Network policies |
+## Implantação
 
----
-
-## Serviços
-
-| Serviço | Tipo | Porta | Descrição |
-|----------|------|-------|------------|
-| **api-service** | NodePort | 80/443 | Exposição externa da aplicação |
-| **mongo-service** | Headless | 27017 | Comunicação interna MongoDB |
-
----
-
-## Deploy Passo a Passo
-
-### 1. Criar Namespaces
-```bash
-kubectl create namespace api-app
-kubectl create namespace data-base
-```
-
-### 2. Deploy do MongoDB
-```bash
-kubectl apply -f data-base/secret-mongodb.yaml
-kubectl apply -f storage/storage-class-mongodb.yaml
-kubectl apply -f data-base/mongodb.yaml
-kubectl apply -f data-base/service-mongodb.yaml
-kubectl apply -f data-base/serviceaccount-mongodb.yaml
-kubectl apply -f data-base/role-mongodb.yaml
-kubectl apply -f data-base/rolebinding-mongodb.yaml
-```
-
-### 3. Deploy da API Catálogo
-```bash
-kubectl apply -f api-app/secret-catalogo.yaml
-kubectl apply -f api-app/catalogo.yaml
-kubectl apply -f api-app/service-catalogo.yaml
-kubectl apply -f api-app/serviceaccount-catalogo.yaml
-kubectl apply -f api-app/role-catalogo.yaml
-kubectl apply -f api-app/rolebinding-catalogo.yaml
-```
-
-### 4. Configurar Auto-scaling
-```bash
-kubectl apply -f api-app/hpa-catalogo.yaml
-kubectl apply -f data-base/hpa-mongodb.yaml
-```
-
-### 5. Aplicar Network Policies
-```bash
-kubectl apply -f api-app/networkpolicy-catalogo.yaml
-kubectl apply -f data-base/networkpolicy-mongodb.yaml
-```
-
----
-
-## Variáveis de Ambiente
-
-**Secret do MongoDB:**
-```yaml
-MONGO_INITDB_ROOT_USERNAME: mongouser
-MONGO_INITDB_ROOT_PASSWORD: mongopwd
-```
-
-**Secret da Aplicação:**
-```yaml
-Mongo__host: mongo-service.data-base.svc.cluster.local
-Mongo__port: 27017
-Mongo__DataBase: admin
-```
-
----
-
-## Resource Limits
-
-```yaml
-# API
-requests:
-  memory: 128Mi
-  cpu: 50m
-limits:
-  memory: 128Mi
-  cpu: 70m
-
-# MongoDB
-requests:
-  memory: 180Mi
-  cpu: 150m
-limits:
-  memory: 256Mi
-  cpu: 250m
-```
-
----
-
-## Health Checks
-
-**MongoDB**
-- Startup: `mongo --eval "db.adminCommand('ping')"`
-- Readiness: TCP socket 27017
-- Liveness: `mongo --eval "db.adminCommand('ping')"`
-
-**API**
-- Readiness: HTTP GET `/read`
-- Liveness: HTTP GET `/health`
-
----
-
-## Segurança
-
-**RBAC**
-- Service Accounts específicos por namespace  
-- Roles com princípio do menor privilégio  
-- ClusterRoles para acesso cross-namespace  
-
-**Network Policies**
-- Isolamento entre namespaces  
-- Acesso restrito à porta do MongoDB  
-- Permissão para DNS resolution  
-
-**Secrets**
-- Credenciais em Base64  
-- Namespace isolation  
-- Controle de acesso via RBAC  
-
----
-
-## Persistência
-
-**StorageClass NFS**
-```yaml
-provisioner: cluster.local/nfs-subdir-external-provisioner
-server: 192.168.1.21
-path: /export
-reclaimPolicy: Retain
-```
-
----
-
-## Monitoramento
+Execute os comandos a partir da raiz do repositório e confira primeiro se o contexto do `kubectl` aponta para o cluster desejado:
 
 ```bash
-kubectl get pods -n api-app
-kubectl get pods -n data-base
-kubectl logs -n api-app -l app=api
-kubectl logs -n data-base -l app=mongodb
-kubectl get hpa -A
+kubectl config current-context
+kubectl get nodes
 ```
 
----
-
-## Troubleshooting
+### 1. MongoDB
 
 ```bash
-kubectl get events -A --sort-by='.lastTimestamp'
-kubectl run test-connection -n api-app --image=busybox --rm -it -- sh
-kubectl auth can-i get secrets --as=system:serviceaccount:api-app:catalogo-service-account
-kubectl rollout restart deployment/api-deployment -n api-app
+kubectl apply -f k8s/mongodb-k8s/
+kubectl rollout status statefulset/mongodb-statefulset \
+  -n default --timeout=180s
+kubectl get service mongo-service -n default
 ```
 
----
+### 2. API
 
-## Boas Práticas Implementadas
- 
- RBAC com princípio do menor privilégio  
- Health checks completos  
- Auto-scaling horizontal  
- Persistência com NFS  
- Network policies para segurança  
- Resource limits definidos  
- Secrets management adequado  
- StatefulSet para banco de dados  
- Probes para resiliência  
+O manifesto `cadastro.yaml` contém `IMAGE_TAG` como placeholder. Use o workflow de CD do projeto, que injeta a imagem da build, ou substitua o placeholder por uma tag existente no GHCR antes de aplicar manualmente. Certifique-se também de que o Secret de pull de imagem esperado pelo Deployment (`ghcr-secret`) existe no namespace `default`.
 
----
+```bash
+kubectl apply -f k8s/cadastro-k8s/
+kubectl rollout status deployment/api-deployment \
+  -n default --timeout=180s
+kubectl get service api-service -n default
+```
 
-## Autor
+Consulte o endereço externo atribuído ao LoadBalancer:
 
-**Patrick Amorim**  
-Projeto de estudo em Kubernetes, MongoDB e .NET Core  
-GitHub: [@patrickpk4](https://github.com/patrickpk4)
+```bash
+kubectl get service api-service -n default \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}{"\n"}'
+```
 
----
+O Deployment aguarda o MongoDB na inicialização. Se ele não ficar pronto, verifique os pods, eventos e logs antes de reiniciar os workloads:
 
-## Licença
-Projeto de estudo e uso educacional.
+```bash
+kubectl get pods -n default -o wide
+kubectl get events -n default --sort-by=.lastTimestamp
+kubectl logs -n default deployment/api-deployment --all-containers=true
+```
+
+## Autoscaling
+
+Os manifests declaram HPA da API (mínimo 1, máximo 10 réplicas, alvos de CPU e memória em 50%) e HPA do MongoDB StatefulSet (mínimo 1, máximo 10, alvos próprios definidos no manifest). Confira a configuração e a disponibilidade das métricas:
+
+```bash
+kubectl get hpa -n default
+kubectl describe hpa api-autoscaling -n default
+kubectl top pods -n default
+```
+
+Se os valores de uso aparecerem como `<unknown>`, confira se o Metrics Server está instalado e saudável.
+
+## Health checks e rede
+
+- API: readiness em `/read`; liveness em `/health`.
+- MongoDB: startup e liveness executam `db.adminCommand('ping')`; readiness testa a porta TCP 27017.
+- NetworkPolicies limitam o acesso à porta do MongoDB aos pods da API e permitem DNS para a API.
+
+Consulte políticas e endpoints para diagnosticar conectividade:
+
+```bash
+kubectl get networkpolicy -n default
+kubectl get endpoints api-service mongo-service -n default
+kubectl describe networkpolicy allow-ctalogo-mongodb -n default
+kubectl describe networkpolicy allow-mongodb-catalogo -n default
+```
+
+NetworkPolicies só são aplicadas se o plugin de rede do cluster suportar essa funcionalidade.
+
+## Verificação rápida
+
+```bash
+kubectl get deployments,statefulsets,services,hpa,networkpolicies -n default
+kubectl get pods -n default
+kubectl get service api-service -n default
+```
+
+Para chamar a API com requisições GET e gerar tráfego de teste sem gravar produtos, use o script documentado em [`../observability/README.md`](../observability/README.md#gerar-tráfego-de-teste).
+
+## Arquivos
+
+### `cadastro-k8s/`
+
+| Arquivo | Recurso |
+|---|---|
+| `cadastro.yaml` | Deployment da API |
+| `service-cadastro.yaml` | Service `LoadBalancer` da API |
+| `configmap.yaml` e `secret-cadastro.yaml` | Configuração e credenciais da aplicação |
+| `hpa-cadastro.yaml` | Autoscaling da API |
+| `networkpolicy-cadastro.yaml` | Políticas de tráfego da API |
+| `serviceaccount-cadastro.yaml`, `role-cadastro.yaml`, `rolebinding-cadastro.yaml` | RBAC da API |
+
+### `mongodb-k8s/`
+
+| Arquivo | Recurso |
+|---|---|
+| `mongodb.yaml` | StatefulSet do MongoDB |
+| `service-mongodb.yaml` | Service headless do MongoDB |
+| `secret-mongodb.yaml` | Credenciais do MongoDB |
+| `hpa-mongodb.yaml` | Autoscaling do StatefulSet |
+| `networkpolicy-mongodb.yaml` | Políticas de tráfego do MongoDB |
+| `serviceaccount-mongodb.yaml`, `role-mongodb.yaml`, `rolebinding-mongodb.yaml` | RBAC do MongoDB |
+
+Para a instrumentação e o monitoramento da API, consulte [`../observability/README.md`](../observability/README.md).
