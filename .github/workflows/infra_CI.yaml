@@ -23,7 +23,7 @@ jobs:
           terraform_version: ${{ vars.TF_VERSION }}
 
       - name: aws credentials
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ vars.REGION }}      
