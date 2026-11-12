@@ -12,4 +12,4 @@ output "private_subnet_id" {
 
 output "vpc_cidr_block" {
   value = aws_vpc.vpc.cidr.block
-  }
+}
