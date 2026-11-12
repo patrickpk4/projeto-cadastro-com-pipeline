@@ -6,7 +6,6 @@ on:
 
 jobs:
   deploy-staging:
-    environment: staging
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
