@@ -31,7 +31,7 @@ jobs:
       - name: Terraform Init
         working-directory: ./infra
         run: |
-          terraform init \
+          terraform init -upgrade \
             -backend-config="bucket=${{ secrets.BUCKET }}" \
             -backend-config="key=${{ secrets.KEY }}" \
             -backend-config="region=${{ vars.REGION }}" \
