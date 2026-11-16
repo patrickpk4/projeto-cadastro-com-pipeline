@@ -8,8 +8,3 @@ module "vpc" {
   private_subnets_cidr = each.value.private_subnets_cidr
 }
 
-module "network" {
-  source            = "./modules/network"
-  vpc_id            = module.vpc["hub"].vpc_id
-  public_subnet_ids = module.vpc["hub"].public_subnet_ids
-}
