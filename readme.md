@@ -173,15 +173,17 @@ dotnet test src/PedeLogo.Catalogo.sln
 
 ## Infraestrutura AWS com Terraform
 
-O código em [`infra/`](./infra/) provisiona uma VPC e um cluster Amazon EKS usando os módulos comunitários da AWS:
+O código em [`infra/`](./infra/) provisiona as VPCs e recursos de rede com Terraform:
 
-- VPC com subnets públicas e privadas, NAT Gateway e VPN Gateway.
+- VPC hub com subnets públicas, Internet Gateway, NAT Gateway e Application Load Balancer público HTTP.
+- VPCs staging e production isoladas, cada uma contendo somente subnets privadas, sem rota para Internet ou conectividade com a hub.
+- O target group do ALB é criado sem targets; para encaminhar tráfego aos workloads em staging/production, será necessário configurar conectividade entre as VPCs e registrar os destinos.
 - EKS com endpoints público e privado habilitados.
 - Managed Node Group com tamanho mínimo 2, desejado 2 e máximo 4 nós.
 - Add-ons CoreDNS, kube-proxy, VPC CNI e EKS Pod Identity Agent.
 - Kubernetes configurado nos arquivos de ambiente com versão `1.35`.
 
-Os valores de ambientes estão em `infra/staging.tfvars` e `infra/prod.tfvars`; bucket, chave e credenciais do backend remoto são fornecidos pela configuração dos workflows. Não inclua credenciais ou valores sensíveis em commits.
+Use [`infra/terraform.tfvars.example`](./infra/terraform.tfvars.example) como referência para a topologia das VPCs. A pipeline lê as variáveis do secret `TF_VARS`; atualize esse secret com a mesma configuração para que o plano e o apply usem a topologia desejada. O output `hub_load_balancer_dns_name` informa o DNS do ALB após o apply. Bucket, chave e credenciais do backend remoto são fornecidos pela configuração dos workflows. Não inclua credenciais ou valores sensíveis em commits.
 
 Os comandos locais de validação, dentro de `infra/`, são:
 
