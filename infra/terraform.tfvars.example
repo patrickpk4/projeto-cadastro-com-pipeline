@@ -1,0 +1,20 @@
+vpcs = {
+  hub = {
+    cidr_block           = "12.0.0.0/16"
+    availability_zones   = ["us-east-1a", "us-east-1b"]
+    public_subnets_cidr  = ["12.0.1.0/24", "12.0.2.0/24"]
+    private_subnets_cidr = []
+  }
+  staging = {
+    cidr_block           = "12.1.0.0/16"
+    availability_zones   = ["us-east-1a", "us-east-1b"]
+    public_subnets_cidr  = []
+    private_subnets_cidr = ["12.1.11.0/24", "12.1.12.0/24"]
+  }
+  production = {
+    cidr_block           = "12.2.0.0/16"
+    availability_zones   = ["us-east-1a", "us-east-1b"]
+    public_subnets_cidr  = []
+    private_subnets_cidr = ["12.2.11.0/24", "12.2.12.0/24"]
+  }
+}

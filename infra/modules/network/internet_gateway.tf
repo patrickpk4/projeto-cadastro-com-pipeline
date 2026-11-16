@@ -29,7 +29,7 @@ resource "aws_route_table_association" "hub_public" {
   route_table_id = aws_route_table.hub_public.id
 }
 
-# Declara um IP público fixo para o NAT Gateway.
+# O NAT Gateway da VPC hub usa um IP público fixo.
 resource "aws_eip" "hub_nat" {
   domain = "vpc"
 
@@ -50,26 +50,4 @@ resource "aws_nat_gateway" "hub" {
   }
 
   depends_on = [aws_route_table_association.hub_public]
-}
-
-# Encaminha o tráfego das subnets privadas pelo NAT Gateway.
-resource "aws_route_table" "hub_private" {
-  vpc_id = var.vpc_id
-
-  tags = {
-    Name      = "rt-hub-private"
-    terraform = "true"
-  }
-}
-
-resource "aws_route" "hub_private_internet" {
-  route_table_id         = aws_route_table.hub_private.id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.hub.id
-}
-
-resource "aws_route_table_association" "hub_private" {
-  count          = length(var.private_subnet_ids)
-  subnet_id      = var.private_subnet_ids[count.index]
-  route_table_id = aws_route_table.hub_private.id
 }
