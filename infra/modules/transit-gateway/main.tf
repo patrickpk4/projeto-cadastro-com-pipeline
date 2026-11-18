@@ -91,8 +91,8 @@ resource "aws_ec2_transit_gateway_route" "spoke_default" {
 resource "aws_ec2_transit_gateway_route" "spoke_isolation" {
   for_each = var.spoke_vpcs
 
-  blackhole                       = true
-  destination_cidr_block          = each.value.cidr_block
+  blackhole                      = true
+  destination_cidr_block         = each.value.cidr_block
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spokes.id
 }
 
