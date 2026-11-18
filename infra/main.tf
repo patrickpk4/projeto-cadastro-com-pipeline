@@ -24,7 +24,7 @@ module "eks" {
   kubernetes_version = each.value.version
 
 
-  endpoint_public_access  = false
+  endpoint_public_access  = true
   endpoint_private_access = true
 
 
