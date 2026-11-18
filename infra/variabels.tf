@@ -11,3 +11,11 @@ variable "vpcs" {
     private_subnets_cidr = list(string)
   }))
 }
+
+variable "eks" {
+  type = map(object({
+    version   = string
+    nodepools = list(string)
+    env       = string
+  }))
+}
