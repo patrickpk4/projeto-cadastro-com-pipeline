@@ -14,7 +14,7 @@ module "network" {
   public_subnet_ids = module.vpc["hub"].public_subnet_ids
 }
 
-################### module eks #############################
+################### module eks ############################
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
