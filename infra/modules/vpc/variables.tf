@@ -18,3 +18,7 @@ variable "private_subnets_cidr" {
   type = list(string)
 }
 
+variable "transit_subnets_cidr" {
+  type = list(string)
+}
+

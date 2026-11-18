@@ -39,4 +39,16 @@ resource "aws_subnet" "private_subnet" {
   }
 }
 
+resource "aws_subnet" "transit_subnet" {
+  count                   = length(var.transit_subnets_cidr)
+  vpc_id                  = aws_vpc.vpc.id
+  cidr_block              = var.transit_subnets_cidr[count.index]
+  availability_zone       = var.availability_zones[count.index]
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name      = "${var.name}-transit-${count.index + 1}"
+    terraform = "true"
+  }
+}
 

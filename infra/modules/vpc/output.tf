@@ -10,6 +10,10 @@ output "private_subnet_ids" {
   value = aws_subnet.private_subnet[*].id
 }
 
+output "transit_subnet_ids" {
+  value = aws_subnet.transit_subnet[*].id
+}
+
 output "vpc_cidr_block" {
   value = aws_vpc.vpc.cidr_block
 }
