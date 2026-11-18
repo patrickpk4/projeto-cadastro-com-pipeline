@@ -17,14 +17,14 @@ module "network" {
 ################### module eks ############################
 
 module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 21.0"
-  for_each             = var.eks
+  source             = "terraform-aws-modules/eks/aws"
+  version            = "~> 21.0"
+  for_each           = var.eks
   name               = each.key
   kubernetes_version = each.value.version
 
 
-  endpoint_public_access = false
+  endpoint_public_access  = false
   endpoint_private_access = true
 
 
