@@ -6,12 +6,30 @@ module "vpc" {
   availability_zones   = each.value.availability_zones
   public_subnets_cidr  = each.value.public_subnets_cidr
   private_subnets_cidr = each.value.private_subnets_cidr
+  transit_subnets_cidr = each.value.transit_subnets_cidr
 }
 
 module "network" {
   source            = "./modules/network"
   vpc_id            = module.vpc["hub"].vpc_id
   public_subnet_ids = module.vpc["hub"].public_subnet_ids
+}
+
+module "transit_gateway" {
+  source = "./modules/transit-gateway"
+
+  hub_vpc_id                = module.vpc["hub"].vpc_id
+  hub_transit_subnet_ids    = module.vpc["hub"].transit_subnet_ids
+  hub_nat_gateway_id        = module.network.nat_gateway_id
+  hub_public_route_table_id = module.network.public_route_table_id
+  spoke_vpcs = {
+    for name, vpc in var.vpcs : name => {
+      vpc_id             = module.vpc[name].vpc_id
+      cidr_block         = vpc.cidr_block
+      private_subnet_ids = module.vpc[name].private_subnet_ids
+    }
+    if name != "hub"
+  }
 }
 
 ################### module eks ############################

@@ -9,6 +9,7 @@ variable "vpcs" {
     availability_zones   = list(string)
     public_subnets_cidr  = list(string)
     private_subnets_cidr = list(string)
+    transit_subnets_cidr = list(string)
   }))
 }
 
