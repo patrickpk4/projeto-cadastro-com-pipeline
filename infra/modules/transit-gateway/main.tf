@@ -1,5 +1,6 @@
 # Cria mapas estáveis para associar route tables a cada subnet.
 locals {
+  # Gera uma rota blackhole de cada VPC spoke para cada outra spoke.
   spoke_isolation_routes = {
     for route in flatten([
       for source_vpc in keys(var.spoke_vpcs) : [
@@ -12,6 +13,7 @@ locals {
     ]) : route.key => route
   }
 
+  # Mapeia as subnets privadas para associá-las à route table da VPC de origem.
   spoke_private_subnets = {
     for subnet in flatten([
       for name, vpc in var.spoke_vpcs : [
@@ -24,6 +26,7 @@ locals {
     ]) : subnet.key => subnet
   }
 
+  # Cria chaves estáveis para associar as subnets de trânsito do hub.
   hub_transit_subnets = {
     for index, subnet_id in var.hub_transit_subnet_ids :
     "hub-${index}" => subnet_id

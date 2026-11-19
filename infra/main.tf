@@ -39,7 +39,7 @@ module "transit_gateway" {
   }
 }
 
-# Cria um cluster EKS para cada ambiente configurado.
+# Cria um cluster EKS privado para cada ambiente configurado.
 module "eks" {
   source             = "terraform-aws-modules/eks/aws"
   version            = "~> 21.0"
@@ -70,6 +70,7 @@ module "eks" {
   }
 }
 
+# Permite ao ALB do hub alcançar os pods registrados nos target groups dos clusters.
 resource "aws_vpc_security_group_ingress_rule" "alb_to_eks" {
   for_each = var.eks
 

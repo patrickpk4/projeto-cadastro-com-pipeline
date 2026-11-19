@@ -31,11 +31,9 @@ spec:
               echo "Aguardando conexão com o MongoDB...";
               sleep 3;
               done
-      imagePullSecrets:
-        - name: ghcr-secret        
       containers:
         - name: catalogo-api
-          image: ghcr.io/patrickpk4/projeto-cadastro-com-pipeline/catalogo-api:IMAGE_TAG
+          image: __ECR_REGISTRY__/catalogo-api:IMAGE_TAG
           resources:
             requests:
               memory: "256Mi"
@@ -73,12 +71,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: MONGO_INITDB_ROOT_USERNAME
-                  name: catalogo-secret
+                  name: mongodb-secret
             - name: mongo_password
               valueFrom:
                 secretKeyRef:
                   key: MONGO_INITDB_ROOT_PASSWORD
-                  name: catalogo-secret
+                  name: mongodb-secret
       affinity:
         podAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

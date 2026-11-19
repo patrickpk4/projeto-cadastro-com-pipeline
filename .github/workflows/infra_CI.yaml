@@ -2,13 +2,13 @@ name: Terraform CI
 
 on:
   pull_request:
-    branches: [main] 
-    
+    branches: [main]
+
     paths:
-      - 'infra/**'  
+      - 'infra/**'
 
 jobs:
-  Plan_Staging: 
+  Plan:
     permissions:
       id-token: write
       contents: read
@@ -26,18 +26,18 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE }}
-          aws-region: ${{ vars.REGION }}      
-  
+          aws-region: ${{ vars.REGION }}
+
       - name: Terraform Init
         working-directory: ./infra
         run: |
-          terraform init -upgrade \
+          terraform init \
             -backend-config="bucket=${{ secrets.BUCKET }}" \
             -backend-config="key=${{ secrets.KEY }}" \
-            -backend-config="region=${{ vars.REGION }}" \
+            -backend-config="region=${{ vars.REGION }}"
 
-      
-          
+
+
       - name: Terraform Plan
         working-directory: ./infra
         env:
@@ -45,29 +45,20 @@ jobs:
         run: |
           echo "${tfvars}" > terraform.tfvars
           terraform plan \
-          -var-file="terraform.tfvars" \
-          -out=tfplan \
+            -var-file="terraform.tfvars" \
+            -out=tfplan
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-staging-${{ github.sha }}
-          path: ./infra
-          retention-days: 2        
-  
-  Deploy_staging:
-    needs: [Plan_Staging]
+          path: ./infra/tfplan
+          retention-days: 2
+
+  Deploy:
+    needs: [Plan]
     uses: ./.github/workflows/infra_CD.yaml
     permissions:
       id-token: write
       contents: read
     secrets: inherit
-
-   
-    
-   
-    
-
-         
-
-              

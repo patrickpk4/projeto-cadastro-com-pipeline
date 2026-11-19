@@ -2,10 +2,10 @@ name: Infrastructure CD
 
 on:
   workflow_call:
-    
+
 
 jobs:
-  deploy-staging:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -15,7 +15,7 @@ jobs:
         uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ vars.TF_VERSION }}
-          
+
       - name: aws credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -28,9 +28,9 @@ jobs:
           terraform init \
             -backend-config="bucket=${{ secrets.BUCKET }}" \
             -backend-config="key=${{ secrets.KEY }}" \
-            -backend-config="region=${{ vars.REGION }}" \
+            -backend-config="region=${{ vars.REGION }}"
 
-      
+
       - name: download plan artifact
         uses: actions/download-artifact@v4
         with:
@@ -38,14 +38,13 @@ jobs:
           path: ./infra
 
       - name: Terraform Apply
-        working-directory: ./infra     
-        run: terraform apply -auto-approve tfplan    
-#
-  #Teste_Cluster:
-  #  needs: [deploy-staging]
-  #  uses: ./.github/workflows/infra_test_cluster.yaml
-  #  permissions:
-  #    id-token: write
-  #    contents: read
-  #  secrets: inherit
-  #
+        working-directory: ./infra
+        run: terraform apply -auto-approve tfplan
+
+  Teste_Cluster:
+    needs: [deploy]
+    uses: ./.github/workflows/infra_test_cluster.yaml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit

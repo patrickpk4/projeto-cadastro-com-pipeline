@@ -1,20 +1,36 @@
 vpcs = {
   hub = {
-    cidr_block           = "12.0.0.0/16"
+    cidr_block           = "10.0.0.0/16"
     availability_zones   = ["us-east-1a", "us-east-1b"]
-    public_subnets_cidr  = ["12.0.1.0/24", "12.0.2.0/24"]
+    public_subnets_cidr  = ["10.0.1.0/24", "10.0.2.0/24"]
     private_subnets_cidr = []
+    transit_subnets_cidr = ["10.0.11.0/24", "10.0.12.0/24"]
   }
   staging = {
-    cidr_block           = "12.1.0.0/16"
+    cidr_block           = "10.1.0.0/16"
     availability_zones   = ["us-east-1a", "us-east-1b"]
     public_subnets_cidr  = []
-    private_subnets_cidr = ["12.1.11.0/24", "12.1.12.0/24"]
+    private_subnets_cidr = ["10.1.11.0/24", "10.1.12.0/24"]
+    transit_subnets_cidr = []
   }
   production = {
-    cidr_block           = "12.2.0.0/16"
+    cidr_block           = "10.2.0.0/16"
     availability_zones   = ["us-east-1a", "us-east-1b"]
     public_subnets_cidr  = []
-    private_subnets_cidr = ["12.2.11.0/24", "12.2.12.0/24"]
+    private_subnets_cidr = ["10.2.11.0/24", "10.2.12.0/24"]
+    transit_subnets_cidr = []
+  }
+}
+
+eks = {
+  EKSstaging = {
+    version   = "1.37"
+    nodepools = ["general-purpose"]
+    env       = "staging"
+  }
+  EKSproduction = {
+    version   = "1.37"
+    nodepools = ["general-purpose"]
+    env       = "production"
   }
 }
