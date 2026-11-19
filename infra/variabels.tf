@@ -1,10 +1,10 @@
-# Define a região AWS usada pelos recursos.
+# Região AWS compartilhada pelos recursos e pelo provider.
 variable "aws_region" {
   type    = string
   default = "us-east-1"
 }
 
-# Guarda a configuração de cada VPC e de suas subnets.
+# Mapa das VPCs; as listas de subnets podem ser vazias quando não se aplicam.
 variable "vpcs" {
   type = map(object({
     cidr_block           = string       # Faixa de IPs da VPC.
@@ -15,7 +15,7 @@ variable "vpcs" {
   }))
 }
 
-# Guarda as configurações de cada cluster EKS.
+# Mapa dos clusters EKS e da VPC onde cada cluster será criado.
 variable "eks" {
   type = map(object({
     version   = string       # Versão do Kubernetes.

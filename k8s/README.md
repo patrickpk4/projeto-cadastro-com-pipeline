@@ -21,7 +21,7 @@ Cliente
 
 | Componente | Recurso | Configuração |
 |---|---|---|
-| API de catálogo | Deployment `api-deployment` | 1 réplica inicial; imagem publicada no GHCR; probes `/read` e `/health`; recursos requests 200m CPU/256Mi e limits 500m CPU/384Mi |
+| API de catálogo | Deployment `api-deployment` | 1 réplica inicial; imagem publicada no Amazon ECR; probes `/read` e `/health`; recursos requests 200m CPU/256Mi e limits 500m CPU/384Mi |
 | Acesso à API | Service `api-service` | Tipo `ClusterIP`; TargetGroupBinding registra os IPs dos pods no target group do ALB central |
 | Banco | StatefulSet `mongodb-statefulset` | MongoDB 4.4.0, 1 réplica, porta 27017, startup/readiness/liveness probes e recursos definidos |
 | Acesso ao banco | Service `mongo-service` | Headless Service, porta 27017, descoberta interna no namespace `default` |
@@ -36,9 +36,9 @@ Os manifests usam o namespace `default` quando não especificam um namespace.
 
 ```text
 k8s/
-├── cadastro-k8s/   # Deployment, Service, ConfigMap, Secret, HPA, RBAC e NetworkPolicy da API
+├── cadastro-k8s/   # Deployment, Service, ConfigMap, HPA, RBAC e NetworkPolicy da API
 ├── environments/   # TargetGroupBinding específico de staging e production
-├── mongodb-k8s/    # StatefulSet, Service, Secret, HPA, RBAC e NetworkPolicy do MongoDB
+├── mongodb-k8s/    # StatefulSet, Service, HPA, RBAC e NetworkPolicy do MongoDB
 └── README.md
 ```
 
@@ -49,7 +49,8 @@ k8s/
 - EKS Auto Mode habilitado; ele mantém os TargetGroupBindings declarados em `environments/`.
 - Metrics Server para que os HPAs obtenham métricas de CPU e memória.
 - Suporte a NetworkPolicy no plugin de rede do cluster para que as políticas tenham efeito.
-- Uma imagem da API publicada no GHCR e credenciais necessárias para baixá-la.
+- Uma imagem da API publicada no Amazon ECR; os nós EKS precisam de permissão para baixá-la.
+- O Secret `mongodb-secret` no namespace `default`, criado a partir das credenciais correspondentes no AWS Secrets Manager.
 
 ## Implantação
 
@@ -71,7 +72,7 @@ kubectl get service mongo-service -n default
 
 ### 2. API
 
-O manifesto `cadastro.yaml` contém `IMAGE_TAG` como placeholder. Use o workflow de CD do projeto, que injeta a imagem da build, ou substitua o placeholder por uma tag existente no GHCR antes de aplicar manualmente. Certifique-se também de que o Secret de pull de imagem esperado pelo Deployment (`ghcr-secret`) existe no namespace `default`.
+O manifesto `cadastro.yaml` contém `__ECR_REGISTRY__` e `IMAGE_TAG` como placeholders. O workflow de CD substitui ambos e publica a imagem do ECR. Em uma implantação manual, substitua-os por um registry e uma tag existentes no ECR e confirme que o `mongodb-secret` já foi criado no namespace `default` a partir do Secrets Manager. Não é necessário `imagePullSecret` quando os nós EKS têm a permissão de pull apropriada.
 
 ```bash
 kubectl apply -f k8s/cadastro-k8s/
@@ -146,7 +147,7 @@ Para chamar a API com requisições GET e gerar tráfego de teste sem gravar pro
 |---|---|
 | `cadastro.yaml` | Deployment da API |
 | `service-cadastro.yaml` | Service `ClusterIP` da API |
-| `configmap.yaml` e `secret-cadastro.yaml` | Configuração e credenciais da aplicação |
+| `configmap.yaml` | Configuração da aplicação; credenciais vêm do Secret `mongodb-secret` |
 | `hpa-cadastro.yaml` | Autoscaling da API |
 | `networkpolicy-cadastro.yaml` | Políticas de tráfego da API |
 | `serviceaccount-cadastro.yaml`, `role-cadastro.yaml`, `rolebinding-cadastro.yaml` | RBAC da API |
@@ -157,7 +158,6 @@ Para chamar a API com requisições GET e gerar tráfego de teste sem gravar pro
 |---|---|
 | `mongodb.yaml` | StatefulSet do MongoDB |
 | `service-mongodb.yaml` | Service headless do MongoDB |
-| `secret-mongodb.yaml` | Credenciais do MongoDB |
 | `hpa-mongodb.yaml` | Autoscaling do StatefulSet |
 | `networkpolicy-mongodb.yaml` | Políticas de tráfego do MongoDB |
 | `serviceaccount-mongodb.yaml`, `role-mongodb.yaml`, `rolebinding-mongodb.yaml` | RBAC do MongoDB |

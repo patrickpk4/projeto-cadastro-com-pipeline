@@ -1,4 +1,4 @@
-# Define a versão mínima do Terraform e os providers usados.
+# Define a versão mínima do Terraform e os providers exigidos pelo projeto.
 terraform {
 
   required_version = ">= 1.7.0"
@@ -13,7 +13,7 @@ terraform {
   }
 }
 
-# Guarda o estado remoto no S3; o workflow informa o bucket e a região.
+# Guarda o estado remoto no S3; o workflow fornece os valores específicos do ambiente.
 terraform {
   backend "s3" {
     bucket = "aws-bucket"
@@ -21,7 +21,7 @@ terraform {
   }
 }
 
-# Configura o provider AWS na região escolhida.
+# Configura as chamadas AWS do Terraform na região selecionada.
 provider "aws" {
   region = var.aws_region
 }

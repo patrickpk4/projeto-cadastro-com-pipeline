@@ -1,0 +1,242 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1120" role="img" aria-labelledby="title description">
+  <title id="title">Arquitetura AWS com VPC hub, Transit Gateway e clusters EKS</title>
+  <desc id="description">Diagrama de entrada da aplicação por ALB, VPCs privadas de staging e production, saída centralizada pelo Transit Gateway e NAT Gateway, ECR, Secrets Manager e GitHub Actions.</desc>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0972d3"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1d8102"/>
+    </marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7d3c98"/>
+    </marker>
+    <symbol id="icon-alb" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#8c4fff"/>
+      <path d="M17 19h30M17 32h30M17 45h30" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="17" cy="19" r="5" fill="#ffb84d"/><circle cx="47" cy="32" r="5" fill="#ffb84d"/>
+      <circle cx="17" cy="45" r="5" fill="#ffb84d"/>
+    </symbol>
+    <symbol id="icon-nat" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#d86613"/>
+      <path d="M15 23h31l-8-8m8 8-8 8M49 41H18l8 8m-8-8 8-8" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-igw" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="29" fill="#0972d3"/>
+      <circle cx="32" cy="32" r="19" fill="none" stroke="#fff" stroke-width="3"/>
+      <path d="M13 32h38M32 13c8 9 8 29 0 38M32 13c-8 9-8 29 0 38" fill="none" stroke="#fff" stroke-width="2.5"/>
+      <path d="M44 12h10v10" fill="none" stroke="#ffb84d" stroke-width="4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-tgw" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#7d3c98"/>
+      <path d="M32 32 16 16M32 32 48 16M32 32 16 48M32 32 48 48" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="32" cy="32" r="9" fill="#ffb84d" stroke="#fff" stroke-width="3"/>
+      <circle cx="16" cy="16" r="4" fill="#fff"/><circle cx="48" cy="16" r="4" fill="#fff"/>
+      <circle cx="16" cy="48" r="4" fill="#fff"/><circle cx="48" cy="48" r="4" fill="#fff"/>
+    </symbol>
+    <symbol id="icon-eks" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#0972d3"/>
+      <circle cx="32" cy="32" r="8" fill="#fff"/>
+      <g stroke="#fff" stroke-width="3" stroke-linecap="round">
+        <path d="M32 11v10M32 43v10M11 32h10M43 32h10M17 17l8 8M39 39l8 8M47 17l-8 8M25 39l-8 8"/>
+      </g>
+      <g fill="#ffb84d">
+        <circle cx="32" cy="11" r="3"/><circle cx="32" cy="53" r="3"/>
+        <circle cx="11" cy="32" r="3"/><circle cx="53" cy="32" r="3"/>
+        <circle cx="17" cy="17" r="3"/><circle cx="47" cy="47" r="3"/>
+        <circle cx="47" cy="17" r="3"/><circle cx="17" cy="47" r="3"/>
+      </g>
+    </symbol>
+    <symbol id="icon-container" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#1d8102"/>
+      <path d="M17 22 32 14l15 8v20l-15 8-15-8z" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M17 22l15 8 15-8M32 30v20" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-database" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#238636"/>
+      <ellipse cx="32" cy="18" rx="17" ry="7" fill="none" stroke="#fff" stroke-width="3"/>
+      <path d="M15 18v27c0 4 8 7 17 7s17-3 17-7V18M15 31c0 4 8 7 17 7s17-3 17-7" fill="none" stroke="#fff" stroke-width="3"/>
+    </symbol>
+    <symbol id="icon-ecr" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#d86613"/>
+      <path d="m32 12 17 9-17 9-17-9zM15 31l17 9 17-9M15 41l17 9 17-9" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M32 30v10m0 10v4" stroke="#fff" stroke-width="3"/>
+    </symbol>
+    <symbol id="icon-secret" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#b34b8c"/>
+      <path d="M32 12 48 18v12c0 11-7 18-16 23-9-5-16-12-16-23V18z" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+      <circle cx="31" cy="30" r="5" fill="#ffb84d"/>
+      <path d="M31 35v8m0-4h7m-2 0v4" stroke="#ffb84d" stroke-width="3" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-s3" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#238636"/>
+      <path d="M15 20h34l-4 30H19z" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M21 20c0-7 5-11 11-11s11 4 11 11" fill="none" stroke="#fff" stroke-width="3"/>
+      <path d="M24 32h16M24 40h16" stroke="#ffb84d" stroke-width="3" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-actions" viewBox="0 0 64 64">
+      <rect x="3" y="3" width="58" height="58" rx="14" fill="#343a40"/>
+      <circle cx="18" cy="18" r="5" fill="#fff"/><circle cx="46" cy="18" r="5" fill="#fff"/>
+      <circle cx="32" cy="46" r="5" fill="#fff"/>
+      <path d="M23 18h18M18 23v10c0 7 6 13 14 13M46 23v10c0 7-6 13-14 13" fill="none" stroke="#ffb84d" stroke-width="3"/>
+    </symbol>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #16191f; }
+      .title { font-size: 30px; font-weight: 700; }
+      .subtitle { font-size: 18px; fill: #545b64; }
+      .cloud-label { font-size: 20px; font-weight: 700; fill: #414d5c; }
+      .vpc-label { font-size: 21px; font-weight: 700; }
+      .zone-label { font-size: 16px; font-weight: 700; fill: #4b5563; }
+      .card-title { font-size: 18px; font-weight: 700; }
+      .card-text { font-size: 15px; fill: #414d5c; }
+      .small { font-size: 14px; fill: #414d5c; }
+      .flow-label { font-size: 15px; font-weight: 700; }
+      .resource { fill: #ffffff; stroke: #8795a1; stroke-width: 2; rx: 12; }
+      .public-zone { fill: #fff8e6; stroke: #e6a700; stroke-width: 2; rx: 14; }
+      .private-zone { fill: #f0f7ff; stroke: #539fe5; stroke-width: 2; rx: 14; }
+      .hub-boundary { fill: #fffdf7; stroke: #e6a700; stroke-width: 3; rx: 20; }
+      .spoke-boundary { fill: #f8fbff; stroke: #539fe5; stroke-width: 3; rx: 20; }
+      .aws-boundary { fill: #ffffff; stroke: #75808a; stroke-width: 2; stroke-dasharray: 10 8; rx: 24; }
+      .app-flow { fill: none; stroke: #0972d3; stroke-width: 4; marker-end: url(#arrow-blue); }
+      .egress-flow { fill: none; stroke: #1d8102; stroke-width: 4; marker-end: url(#arrow-green); }
+      .automation-flow { fill: none; stroke: #7d3c98; stroke-width: 3; stroke-dasharray: 8 7; marker-end: url(#arrow-purple); }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1120" fill="#f5f7f9"/>
+  <text x="42" y="52" class="title">Arquitetura AWS — EKS Staging e Production</text>
+  <text x="42" y="82" class="subtitle">Entrada por ALB, isolamento entre ambientes e egress centralizado no hub</text>
+
+  <rect x="220" y="110" width="1360" height="920" class="aws-boundary"/>
+  <text x="250" y="145" class="cloud-label">AWS Cloud · us-east-1</text>
+
+  <rect x="270" y="165" width="830" height="315" class="hub-boundary"/>
+  <text x="295" y="198" class="vpc-label">VPC HUB · rede compartilhada</text>
+
+  <rect x="295" y="215" width="410" height="235" class="public-zone"/>
+  <text x="315" y="242" class="zone-label">SUBNETS PÚBLICAS</text>
+  <rect x="320" y="258" width="360" height="80" class="resource"/>
+  <use href="#icon-alb" x="333" y="273" width="50" height="50"/>
+  <text x="395" y="287" class="card-title">ALB público</text>
+  <text x="395" y="312" class="card-text">HTTP :80 staging · :8080 production</text>
+  <text x="395" y="330" class="small">Targets IP · health check /health:8080</text>
+  <rect x="320" y="355" width="215" height="72" class="resource"/>
+  <use href="#icon-nat" x="332" y="367" width="48" height="48"/>
+  <text x="389" y="384" class="card-title">NAT Gateway</text>
+  <text x="389" y="408" class="card-text">uma AZ · egress</text>
+  <rect x="550" y="355" width="130" height="72" class="resource"/>
+  <use href="#icon-igw" x="558" y="368" width="45" height="45"/>
+  <text x="608" y="384" class="card-title">IGW</text>
+  <text x="608" y="408" class="small">Internet</text>
+
+  <rect x="725" y="215" width="375" height="235" class="private-zone"/>
+  <text x="745" y="242" class="zone-label">SUBNETS PRIVADAS DE TRÂNSITO</text>
+  <rect x="755" y="275" width="315" height="105" class="resource"/>
+  <use href="#icon-tgw" x="770" y="297" width="58" height="58"/>
+  <text x="840" y="310" class="card-title">Anexo do TGW</text>
+  <text x="840" y="336" class="card-text">Route table → NAT</text>
+  <text x="840" y="360" class="small">Sem workloads</text>
+
+  <rect x="1120" y="185" width="405" height="265" fill="#f8f5ff" stroke="#9b7bb5" stroke-width="2" rx="14"/>
+  <text x="1140" y="214" class="zone-label">SERVIÇOS AWS REGIONAIS · FORA DAS VPCs</text>
+  <rect x="1145" y="232" width="170" height="90" class="resource"/>
+  <use href="#icon-ecr" x="1155" y="250" width="52" height="52"/>
+  <text x="1215" y="267" class="card-title">Amazon ECR</text>
+  <text x="1215" y="292" class="card-text">Imagem da API</text>
+  <rect x="1330" y="232" width="170" height="90" class="resource"/>
+  <use href="#icon-secret" x="1338" y="250" width="52" height="52"/>
+  <text x="1396" y="267" class="card-title">Secrets</text>
+  <text x="1396" y="292" class="small">Manager · por ambiente</text>
+  <rect x="1145" y="335" width="170" height="65" class="resource"/>
+  <use href="#icon-s3" x="1155" y="342" width="50" height="50"/>
+  <text x="1215" y="375" class="card-title">S3 · state</text>
+  <text x="1330" y="352" class="small">Sem VPC endpoints declarados</text>
+  <text x="1330" y="378" class="small">ECR acessado pelos nós via rota/NAT</text>
+
+  <rect x="700" y="535" width="390" height="105" fill="#f5effa" stroke="#7d3c98" stroke-width="3" rx="18"/>
+  <use href="#icon-tgw" x="720" y="552" width="68" height="68"/>
+  <text x="805" y="575" class="card-title">Transit Gateway</text>
+  <text x="805" y="603" class="card-text">route table hub + uma por spoke</text>
+  <text x="805" y="625" class="small">blackhole entre ambientes</text>
+
+  <rect x="1130" y="520" width="390" height="135" fill="#eef6ff" stroke="#539fe5" stroke-width="2" rx="14"/>
+  <use href="#icon-eks" x="1150" y="545" width="62" height="62"/>
+  <text x="1220" y="553" class="card-title">EKS API · control plane</text>
+  <text x="1220" y="582" class="card-text">Endpoint público + privado</text>
+  <text x="1220" y="608" class="card-text">kubectl / IAM · separado do ALB</text>
+  <text x="1220" y="634" class="small">CIDR público não restrito no código</text>
+
+  <rect x="270" y="700" width="610" height="290" class="spoke-boundary"/>
+  <use href="#icon-eks" x="292" y="708" width="35" height="35"/>
+  <text x="338" y="733" class="vpc-label">VPC STAGING · somente subnets privadas</text>
+  <rect x="295" y="752" width="560" height="205" class="private-zone"/>
+  <text x="315" y="780" class="zone-label">EKS AUTO MODE · workload privado</text>
+  <rect x="315" y="800" width="250" height="105" class="resource"/>
+  <use href="#icon-container" x="328" y="818" width="48" height="48"/>
+  <text x="384" y="832" class="card-title">API · pods</text>
+  <text x="384" y="858" class="card-text">Service ClusterIP :80</text>
+  <text x="384" y="882" class="card-text">container :8080 · TGB IP</text>
+  <rect x="590" y="800" width="240" height="105" class="resource"/>
+  <use href="#icon-database" x="601" y="818" width="48" height="48"/>
+  <text x="657" y="832" class="card-title">MongoDB · pod</text>
+  <text x="657" y="858" class="card-text">Service interno :27017</text>
+  <text x="657" y="882" class="card-text">Secret do ambiente</text>
+  <text x="315" y="936" class="small">Rota 0.0.0.0/0 → TGW · sem IGW/NAT local</text>
+
+  <rect x="940" y="700" width="610" height="290" class="spoke-boundary"/>
+  <use href="#icon-eks" x="962" y="708" width="35" height="35"/>
+  <text x="1008" y="733" class="vpc-label">VPC PRODUCTION · somente subnets privadas</text>
+  <rect x="965" y="752" width="560" height="205" class="private-zone"/>
+  <text x="985" y="780" class="zone-label">EKS AUTO MODE · workload privado</text>
+  <rect x="985" y="800" width="250" height="105" class="resource"/>
+  <use href="#icon-container" x="998" y="818" width="48" height="48"/>
+  <text x="1054" y="832" class="card-title">API · pods</text>
+  <text x="1054" y="858" class="card-text">Service ClusterIP :80</text>
+  <text x="1054" y="882" class="card-text">container :8080 · TGB IP</text>
+  <rect x="1260" y="800" width="240" height="105" class="resource"/>
+  <use href="#icon-database" x="1271" y="818" width="48" height="48"/>
+  <text x="1327" y="832" class="card-title">MongoDB · pod</text>
+  <text x="1327" y="858" class="card-text">Service interno :27017</text>
+  <text x="1327" y="882" class="card-text">Secret do ambiente</text>
+  <text x="985" y="936" class="small">Rota 0.0.0.0/0 → TGW · sem IGW/NAT local</text>
+
+  <rect x="35" y="245" width="155" height="85" fill="#ffffff" stroke="#8795a1" stroke-width="2" rx="14"/>
+  <use href="#icon-igw" x="45" y="263" width="48" height="48"/>
+  <text x="102" y="280" class="card-title">Internet</text>
+  <text x="102" y="306" class="card-text">clientes HTTP</text>
+
+  <rect x="1600" y="790" width="175" height="120" fill="#ffffff" stroke="#7d3c98" stroke-width="2" rx="14"/>
+  <use href="#icon-actions" x="1610" y="820" width="52" height="52"/>
+  <text x="1668" y="836" class="card-title">Actions</text>
+  <text x="1668" y="861" class="card-text">OIDC · AWS</text>
+  <text x="1620" y="895" class="small">build · secrets · deploy</text>
+
+  <path d="M190 275 H320" class="app-flow"/>
+  <text x="205" y="258" class="flow-label" fill="#0972d3">entrada pública</text>
+  <path d="M680 298 C735 330 720 470 805 535" class="app-flow"/>
+  <path d="M790 640 C740 668 650 675 570 700" class="app-flow"/>
+  <path d="M1000 640 C1055 665 1125 676 1195 700" class="app-flow"/>
+  <text x="705" y="684" class="flow-label" fill="#0972d3">ALB → target group → pods</text>
+
+  <path d="M900 535 V380" class="egress-flow"/>
+  <path d="M755 325 C680 325 620 365 535 392" class="egress-flow"/>
+  <path d="M570 700 C640 660 715 653 775 640" class="egress-flow"/>
+  <path d="M1200 700 C1130 665 1060 655 1015 640" class="egress-flow"/>
+  <path d="M535 392 H550" class="egress-flow"/>
+  <path d="M550 410 C465 465 260 460 180 325" class="egress-flow"/>
+  <text x="230" y="446" class="small" fill="#1d8102">saída pelo NAT/IGW</text>
+
+  <path d="M1600 810 C1540 750 1500 390 1315 280" class="automation-flow"/>
+  <path d="M1600 835 C1570 760 1560 390 1500 280" class="automation-flow"/>
+  <path d="M1600 865 C1570 820 1560 680 1520 600" class="automation-flow"/>
+  <text x="1485" y="760" class="small" fill="#7d3c98">OIDC · push ECR · segredo · deploy</text>
+
+  <rect x="270" y="1005" width="1280" height="1" fill="#cbd5df"/>
+  <circle cx="300" cy="1045" r="7" fill="#0972d3"/>
+  <text x="318" y="1051" class="small">tráfego de aplicação</text>
+  <circle cx="520" cy="1045" r="7" fill="#1d8102"/>
+  <text x="538" y="1051" class="small">egress centralizado</text>
+  <circle cx="770" cy="1045" r="7" fill="#7d3c98"/>
+  <text x="788" y="1051" class="small">automação CI/CD</text>
+  <text x="1045" y="1051" class="small">Esquema conceitual; CIDRs definidos por TF_VARS.</text>
+</svg>

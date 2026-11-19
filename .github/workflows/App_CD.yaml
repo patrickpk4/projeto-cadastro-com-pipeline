@@ -11,28 +11,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: download docker image
-        run: |
-          docker pull ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
-
-      - name: aws credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE }}
-          aws-region: ${{ vars.REGION }} 
+          aws-region: ${{ vars.REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Get staging MongoDB credentials
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            ,projeto-cadastro/staging/mongodb
+          parse-json-secrets: true
 
       - name: Configure kubectl
         run: |
           aws eks update-kubeconfig \
             --region ${{ vars.REGION }} \
             --name ${{ vars.CLUSTER_NAME }}
+
+      - name: Create MongoDB Kubernetes Secret
+        run: |
+          set -euo pipefail
+          : "${MONGO_INITDB_ROOT_USERNAME:?Missing MongoDB username in Secrets Manager}"
+          : "${MONGO_INITDB_ROOT_PASSWORD:?Missing MongoDB password in Secrets Manager}"
+          kubectl create secret generic mongodb-secret \
+            --from-literal="MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}" \
+            --from-literal="MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}" \
+            --dry-run=client \
+            --output=yaml |
+            kubectl apply --server-side --field-manager=github-actions -f -
+
+      - name: Set ECR image repository in manifest
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          sed -i "s|__ECR_REGISTRY__|${ECR_REGISTRY}|g" \
+            k8s/cadastro-k8s/cadastro.yaml
 
       - name: Get hub ALB URL
         id: hub-alb
@@ -52,7 +71,6 @@ jobs:
           manifests: |
             k8s/cadastro-k8s/serviceaccount-cadastro.yaml
             k8s/cadastro-k8s/cadastro.yaml
-            k8s/cadastro-k8s/secret-cadastro.yaml
             k8s/cadastro-k8s/configmap.yaml
             k8s/cadastro-k8s/service-cadastro.yaml
             k8s/environments/staging/targetgroupbinding.yaml
@@ -62,7 +80,6 @@ jobs:
             k8s/cadastro-k8s/networkpolicy-cadastro.yaml
             k8s/mongodb-k8s/serviceaccount-mongodb.yaml
             k8s/mongodb-k8s/mongodb.yaml
-            k8s/mongodb-k8s/secret-mongodb.yaml
             k8s/mongodb-k8s/service-mongodb.yaml
             k8s/mongodb-k8s/hpa-mongodb.yaml
             k8s/mongodb-k8s/hpa-mongodb.yaml
@@ -71,7 +88,7 @@ jobs:
             k8s/mongodb-k8s/rolebinding-mongodb.yaml
 
           images: |
-            ghcr.io/${{ github.repository }}/catalogo-api:${{ github.sha }}
+            ${{ steps.ecr-login.outputs.registry }}/catalogo-api:${{ github.sha }}-${{ github.run_attempt }}
 
       - name: ZAP Scan - smoke test
         uses: zaproxy/action-api-scan@v0.10.0
