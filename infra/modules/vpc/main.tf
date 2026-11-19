@@ -1,4 +1,4 @@
-# declara vpc  
+# Cria a rede isolada para este ambiente.
 resource "aws_vpc" "vpc" {
   cidr_block           = var.cidr_block
   enable_dns_support   = true
@@ -10,7 +10,7 @@ resource "aws_vpc" "vpc" {
   }
 }
 
-# declara subnets publicas
+# Cria as subnets públicas, quando o ambiente tiver alguma.
 resource "aws_subnet" "public_subnet" {
   count                   = length(var.public_subnets_cidr)
   vpc_id                  = aws_vpc.vpc.id
@@ -24,8 +24,7 @@ resource "aws_subnet" "public_subnet" {
   }
 }
 
-# declara subnets privadas
-
+# Cria as subnets privadas usadas pelos workloads.
 resource "aws_subnet" "private_subnet" {
   count                   = length(var.private_subnets_cidr)
   vpc_id                  = aws_vpc.vpc.id
@@ -39,6 +38,7 @@ resource "aws_subnet" "private_subnet" {
   }
 }
 
+# Cria subnets privadas dedicadas ao anexo do Transit Gateway.
 resource "aws_subnet" "transit_subnet" {
   count                   = length(var.transit_subnets_cidr)
   vpc_id                  = aws_vpc.vpc.id

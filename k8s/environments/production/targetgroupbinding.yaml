@@ -1,0 +1,10 @@
+apiVersion: eks.amazonaws.com/v1
+kind: TargetGroupBinding
+metadata:
+  name: api-target-group-binding
+spec:
+  targetGroupName: hub-production
+  targetType: ip
+  serviceRef:
+    name: api-service
+    port: 80
