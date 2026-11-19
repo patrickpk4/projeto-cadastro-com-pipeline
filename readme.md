@@ -52,8 +52,9 @@ Consulte o Swagger do ambiente para ver o contrato publicado pela versão atualm
 
 ```mermaid
 flowchart LR
-    Client[Cliente / Swagger] --> LB[Service LoadBalancer]
-    LB --> API[Deployment .NET 8]
+    Client[Cliente / Swagger] --> ALB[ALB público no hub]
+    ALB --> TGW[Transit Gateway]
+    TGW --> API[Service ClusterIP / Deployment .NET 8]
     API --> DB[Service headless]
     DB --> Mongo[StatefulSet MongoDB]
 
@@ -88,7 +89,7 @@ API .NET 8
 | Banco de dados | MongoDB 4.4.0 |
 | Containers | Docker; imagens da API publicadas no GitHub Container Registry (GHCR) |
 | Orquestração | Kubernetes no Amazon EKS; Deployments, StatefulSets, Services, HPAs, RBAC e NetworkPolicies |
-| Infraestrutura | Terraform >= 1.7; AWS Provider `~> 6.67`; módulos AWS VPC 6.7.3 e EKS `~> 21.0` |
+| Infraestrutura | Terraform >= 1.7; AWS Provider `~> 6.67`; módulo EKS `~> 21.0`; módulos de VPC e rede locais |
 | Observabilidade | OpenTelemetry Operator e Collector Contrib 0.160.0, Prometheus, Grafana e `kube-prometheus-stack` chart 92.3.0 |
 | CI/CD e qualidade | GitHub Actions, xUnit, SonarCloud, Trivy, Checkov |
 
@@ -173,23 +174,55 @@ dotnet test src/PedeLogo.Catalogo.sln
 
 ## Infraestrutura AWS com Terraform
 
-O código em [`infra/`](./infra/) provisiona as VPCs e recursos de rede com Terraform:
+O código em [`infra/`](./infra/) cria as VPCs, os recursos de rede e os clusters EKS com Terraform.
 
-- VPC hub com subnets públicas, Internet Gateway, NAT Gateway e Application Load Balancer público HTTP.
-- VPCs staging e production isoladas, cada uma contendo somente subnets privadas, sem rota para Internet ou conectividade com a hub.
-- O target group do ALB é criado sem targets; para encaminhar tráfego aos workloads em staging/production, será necessário configurar conectividade entre as VPCs e registrar os destinos.
-- EKS com endpoints público e privado habilitados.
-- Managed Node Group com tamanho mínimo 2, desejado 2 e máximo 4 nós.
-- Add-ons CoreDNS, kube-proxy, VPC CNI e EKS Pod Identity Agent.
-- Kubernetes configurado nos arquivos de ambiente com versão `1.35`.
+### Topologia de rede
 
-Use [`infra/terraform.tfvars.example`](./infra/terraform.tfvars.example) como referência para a topologia das VPCs. A pipeline lê as variáveis do secret `TF_VARS`; atualize esse secret com a mesma configuração para que o plano e o apply usem a topologia desejada. O output `hub_load_balancer_dns_name` informa o DNS do ALB após o apply. Bucket, chave e credenciais do backend remoto são fornecidos pela configuração dos workflows. Não inclua credenciais ou valores sensíveis em commits.
+```mermaid
+flowchart LR
+    Client["Cliente"] -->|80 staging / 8080 production| ALB["ALB público no hub"]
+    ALB --> TGW["Transit Gateway"]
+    TGW --> Staging["VPC staging<br/>Service ClusterIP"]
+    TGW --> Production["VPC production<br/>Service ClusterIP"]
+    Staging --> TGW
+    Production --> TGW
+    TGW --> Transit["Subnets privadas de trânsito<br/>na VPC hub"]
+    Transit --> NAT["NAT Gateway<br/>subnet pública do hub"]
+    NAT --> IGW["Internet Gateway"] --> Internet["Internet"]
+```
+
+- **Hub:** tem subnets públicas para o ALB, o NAT Gateway e a rota para o Internet Gateway. Também tem subnets privadas dedicadas ao anexo do Transit Gateway; elas não são subnets de workloads.
+- **Entrada:** um ALB no hub encaminha a porta 80 para staging e a porta 8080 para production. O DNS gerado pela AWS permite acessar ambos sem domínio próprio. Os TargetGroupBindings do EKS Auto Mode registram os IPs dos pods nos target groups existentes.
+- **Staging e production:** têm somente subnets privadas para os clusters e workloads. Cada VPC tem uma tabela de rotas própria no TGW; a rota padrão passa pelo TGW e pelo NAT Gateway do hub para acessar a internet.
+- **Isolamento:** staging e production não têm rota direta entre si. A tabela do TGW de cada spoke contém uma rota blackhole para a outra VPC.
+- **NAT:** há um NAT Gateway no hub, na primeira subnet pública configurada. É uma solução centralizada, mas fica em uma zona de disponibilidade; tráfego entre zonas pode gerar custo e a zona do NAT é um ponto único de falha.
+- **Security Groups:** o ALB aceita HTTP público nas portas 80 e 8080 e só envia tráfego TCP/8080 aos CIDRs das VPCs dos clusters. O SG primário de cada cluster aceita a porta 8080 a partir do SG do ALB, usando referência de SG pelo TGW. A rota padrão das VPCs spoke força o egress de internet pelo TGW; regras de SG não selecionam o próximo salto.
+- **NetworkPolicy:** o acesso aos pods da API na porta 8080 é limitado aos CIDRs das subnets públicas do hub. Se esses CIDRs forem alterados em `terraform.tfvars`, atualize também `k8s/cadastro-k8s/networkpolicy-cadastro.yaml`.
+- **EKS:** endpoints público e privado estão habilitados para administração do cluster; esse acesso à API do Kubernetes é separado da entrada da aplicação pelo ALB. O `compute_config` ativa o EKS Auto Mode com o pool `general-purpose`; não há um número fixo de nós definido nesse arquivo.
+- **TargetGroupBinding:** não remova o binding isoladamente. O EKS Auto Mode pode excluir o target group associado quando o binding é removido; coordene a remoção com o Terraform.
+- **Versão do Kubernetes:** cada cluster usa a versão definida em `infra/terraform.tfvars` (atualmente `1.37`).
+
+### Variáveis e pipeline
+
+`transit_subnets_cidr` é obrigatório em **cada** entrada de `vpcs`. Preencha com duas faixas privadas no hub e listas vazias nas VPCs spoke:
+
+```hcl
+hub        = { transit_subnets_cidr = ["10.0.11.0/24", "10.0.12.0/24"] }
+staging    = { transit_subnets_cidr = [] }
+production = { transit_subnets_cidr = [] }
+```
+
+O arquivo [`infra/terraform.tfvars.example`](./infra/terraform.tfvars.example) serve como referência; antes de usá-lo, confirme que ele contém esse campo obrigatório. A pipeline grava o secret `TF_VARS` em `terraform.tfvars`, então o valor salvo em **Settings → Secrets and variables → Actions** também precisa incluir o campo em todas as VPCs.
+
+A role AWS informada por `AWS_ROLE` precisa de permissões para criar e administrar Transit Gateways, anexos, rotas, route tables, subnets e tags. A pipeline de staging também consulta o ALB (`elasticloadbalancing:DescribeLoadBalancers`). Por exemplo, a criação do gateway exige `ec2:CreateTransitGateway`. Um erro `UnauthorizedOperation` deve ser corrigido na policy IAM dessa role.
+
+Os outputs `staging_url` e `production_url` informam os endereços após o apply (`http://<DNS-do-ALB>` e `http://<DNS-do-ALB>:8080`). A pipeline fornece bucket, chave e região do backend S3; não inclua credenciais em arquivos versionados.
 
 Os comandos locais de validação, dentro de `infra/`, são:
 
 ```bash
 terraform init -backend=false
-terraform fmt -check
+terraform fmt -check -recursive
 terraform validate
 ```
 
@@ -197,7 +230,7 @@ Para criar ou modificar infraestrutura, confira o ambiente/contexto, backend e p
 
 ## Aplicação no Kubernetes
 
-A API e o MongoDB são implantados no namespace `default`. A API fica disponível por um Service `LoadBalancer` na porta 80; o MongoDB é acessível internamente por um Service headless na porta 27017.
+A API e o MongoDB são implantados no namespace `default`. A API usa um Service `ClusterIP` na porta 80 e é exposta pelo ALB do hub; staging usa a porta 80 e production a porta 8080. O MongoDB é acessível internamente por um Service headless na porta 27017.
 
 O manifesto da API contém `IMAGE_TAG` como placeholder. Para deployment manual, use uma tag já publicada no GHCR e verifique o Secret de pull `ghcr-secret`; a pipeline injeta a imagem construída para o commit. O MongoDB usa StatefulSet, probes de saúde, recursos requests/limits e políticas de rede.
 
@@ -237,7 +270,7 @@ Configure as credenciais AWS via OIDC conforme os workflows e limite permissões
 
 - Os valores Base64 de Kubernetes Secrets **não são criptografia**. Os Secrets de exemplo nos manifests não devem ser tratados como credenciais seguras; substitua-os e rotacione qualquer credencial que tenha sido usada em um cluster compartilhado.
 - Prefira AWS Secrets Manager/External Secrets ou geração de Secrets fora do repositório para ambientes reais.
-- Revise exposição do LoadBalancer, autenticação/autorização da API, NetworkPolicies e regras de Security Groups antes de produção.
+- O ALB do laboratório usa HTTP nas portas 80 e 8080, sem TLS. Antes de produção, configure certificado HTTPS e revise autenticação/autorização da API, NetworkPolicies e regras de Security Groups.
 - O `kube-prometheus-stack` está configurado com retenção Prometheus de 1 dia e armazenamento efêmero (`emptyDir`); métricas podem ser perdidas quando o pod reinicia.
 - Configure backup e persistência apropriados para dados MongoDB antes de uso produtivo.
 - Proteja o acesso aos dashboards e ao endpoint Prometheus. O port-forward é recomendado para acesso local de operação.

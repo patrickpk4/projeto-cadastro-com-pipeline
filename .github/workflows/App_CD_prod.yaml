@@ -46,6 +46,7 @@ jobs:
             k8s/cadastro-k8s/secret-cadastro.yaml
             k8s/cadastro-k8s/configmap.yaml
             k8s/cadastro-k8s/service-cadastro.yaml
+            k8s/environments/production/targetgroupbinding.yaml
             k8s/cadastro-k8s/hpa-cadastro.yaml
             k8s/cadastro-k8s/role-cadastro.yaml
             k8s/cadastro-k8s/rolebinding-cadastro.yaml

@@ -11,7 +11,9 @@ Este diretório contém os manifests Kubernetes da API PedeLogo Catálogo e do M
 
 ```text
 Cliente
-  -> Service api-service (LoadBalancer :80)
+  -> ALB do hub (staging :80 ou production :8080)
+  -> Transit Gateway
+  -> TargetGroupBinding -> Service api-service (ClusterIP :80)
   -> Deployment api-deployment (.NET 8, container :8080)
   -> Service mongo-service (headless :27017)
   -> StatefulSet mongodb-statefulset (MongoDB 4.4.0)
@@ -20,7 +22,7 @@ Cliente
 | Componente | Recurso | Configuração |
 |---|---|---|
 | API de catálogo | Deployment `api-deployment` | 1 réplica inicial; imagem publicada no GHCR; probes `/read` e `/health`; recursos requests 200m CPU/256Mi e limits 500m CPU/384Mi |
-| Acesso à API | Service `api-service` | Tipo `LoadBalancer`, porta 80 para a porta 8080 do container |
+| Acesso à API | Service `api-service` | Tipo `ClusterIP`; TargetGroupBinding registra os IPs dos pods no target group do ALB central |
 | Banco | StatefulSet `mongodb-statefulset` | MongoDB 4.4.0, 1 réplica, porta 27017, startup/readiness/liveness probes e recursos definidos |
 | Acesso ao banco | Service `mongo-service` | Headless Service, porta 27017, descoberta interna no namespace `default` |
 | Configuração da API | ConfigMap `catalogo-config` | Host, porta e nome do banco MongoDB |
@@ -35,6 +37,7 @@ Os manifests usam o namespace `default` quando não especificam um namespace.
 ```text
 k8s/
 ├── cadastro-k8s/   # Deployment, Service, ConfigMap, Secret, HPA, RBAC e NetworkPolicy da API
+├── environments/   # TargetGroupBinding específico de staging e production
 ├── mongodb-k8s/    # StatefulSet, Service, Secret, HPA, RBAC e NetworkPolicy do MongoDB
 └── README.md
 ```
@@ -43,7 +46,7 @@ k8s/
 
 - `kubectl` configurado para o cluster EKS correto.
 - Permissão para criar/atualizar workloads, Services, Secrets, RBAC, NetworkPolicies e HPAs.
-- Um controlador AWS que provisione Services do tipo `LoadBalancer`.
+- EKS Auto Mode habilitado; ele mantém os TargetGroupBindings declarados em `environments/`.
 - Metrics Server para que os HPAs obtenham métricas de CPU e memória.
 - Suporte a NetworkPolicy no plugin de rede do cluster para que as políticas tenham efeito.
 - Uma imagem da API publicada no GHCR e credenciais necessárias para baixá-la.
@@ -77,12 +80,15 @@ kubectl rollout status deployment/api-deployment \
 kubectl get service api-service -n default
 ```
 
-Consulte o endereço externo atribuído ao LoadBalancer:
+No cluster de staging, aplique apenas o binding de staging; no cluster production, aplique apenas o de production:
 
 ```bash
-kubectl get service api-service -n default \
-  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}{"\n"}'
+kubectl apply -f k8s/environments/staging/targetgroupbinding.yaml
+# Ou, no cluster production:
+kubectl apply -f k8s/environments/production/targetgroupbinding.yaml
 ```
+
+O DNS é o mesmo para os dois ambientes: staging usa a porta 80 e production a porta 8080. Consulte `terraform output -raw staging_url` e `terraform output -raw production_url` no diretório `infra/`. Não remova um TargetGroupBinding isoladamente: o EKS Auto Mode pode excluir o target group associado.
 
 O Deployment aguarda o MongoDB na inicialização. Se ele não ficar pronto, verifique os pods, eventos e logs antes de reiniciar os workloads:
 
@@ -107,8 +113,9 @@ Se os valores de uso aparecerem como `<unknown>`, confira se o Metrics Server es
 ## Health checks e rede
 
 - API: readiness em `/read`; liveness em `/health`.
+- ALB: health check em `/health`, porta 8080 nos pods.
 - MongoDB: startup e liveness executam `db.adminCommand('ping')`; readiness testa a porta TCP 27017.
-- NetworkPolicies limitam o acesso à porta do MongoDB aos pods da API e permitem DNS para a API.
+- NetworkPolicies limitam a entrada da API aos CIDRs das subnets públicas do hub e o acesso ao MongoDB aos pods da API; atualize os CIDRs da política da API se alterar as subnets do hub.
 
 Consulte políticas e endpoints para diagnosticar conectividade:
 
@@ -138,7 +145,7 @@ Para chamar a API com requisições GET e gerar tráfego de teste sem gravar pro
 | Arquivo | Recurso |
 |---|---|
 | `cadastro.yaml` | Deployment da API |
-| `service-cadastro.yaml` | Service `LoadBalancer` da API |
+| `service-cadastro.yaml` | Service `ClusterIP` da API |
 | `configmap.yaml` e `secret-cadastro.yaml` | Configuração e credenciais da aplicação |
 | `hpa-cadastro.yaml` | Autoscaling da API |
 | `networkpolicy-cadastro.yaml` | Políticas de tráfego da API |
