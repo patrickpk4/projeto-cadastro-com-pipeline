@@ -22,15 +22,3 @@ vpcs = {
   }
 }
 
-eks = {
-  EKSstaging = {
-    version   = "1.37"
-    nodepools = ["general-purpose"]
-    env       = "staging"
-  }
-  EKSproduction = {
-    version   = "1.37"
-    nodepools = ["general-purpose"]
-    env       = "production"
-  }
-}
