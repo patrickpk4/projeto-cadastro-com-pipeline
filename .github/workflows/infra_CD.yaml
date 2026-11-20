@@ -56,4 +56,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    secrets: inherit
+    secrets: 
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
+      BUCKET: ${{ secrets.BUCKET }}
+      KEY: ${{ secrets.KEY }}
+      TF_VARS: ${{ secrets.TF_VARS }}
