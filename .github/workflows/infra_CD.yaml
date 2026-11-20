@@ -2,6 +2,15 @@ name: Infrastructure CD
 
 on:
   workflow_call:
+    secrets:
+      AWS_ROLE:
+        required: true
+      BUCKET:
+        required: true
+      KEY:
+        required: true
+      TF_VARS:
+        required: true
 
 
 jobs:
