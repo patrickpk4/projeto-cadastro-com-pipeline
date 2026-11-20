@@ -63,6 +63,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      security-events: write
     secrets: 
       AWS_ROLE: ${{ secrets.AWS_ROLE }}
       BUCKET: ${{ secrets.BUCKET }}

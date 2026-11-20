@@ -2,6 +2,7 @@ name: Infrastructure CD
 
 on:
   workflow_call:
+  
     secrets:
       AWS_ROLE:
         required: true
@@ -56,6 +57,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      security-events: write
     secrets: 
       AWS_ROLE: ${{ secrets.AWS_ROLE }}
       BUCKET: ${{ secrets.BUCKET }}
