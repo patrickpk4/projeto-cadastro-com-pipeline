@@ -34,18 +34,6 @@ jobs:
             --region ${{ vars.REGION }} \
             --name ${{ vars.CLUSTER_NAME }}
 
-      - name: Create MongoDB Kubernetes Secret
-        run: |
-          set -euo pipefail
-          : "${MONGO_INITDB_ROOT_USERNAME:?Missing MongoDB username in Secrets Manager}"
-          : "${MONGO_INITDB_ROOT_PASSWORD:?Missing MongoDB password in Secrets Manager}"
-          kubectl create secret generic mongodb-secret \
-            --from-literal="MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}" \
-            --from-literal="MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}" \
-            --dry-run=client \
-            --output=yaml |
-            kubectl apply --server-side --field-manager=github-actions -f -
-
       - name: Set ECR image repository in manifest
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}

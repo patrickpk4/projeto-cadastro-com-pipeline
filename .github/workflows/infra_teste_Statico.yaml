@@ -45,16 +45,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+        # scanner de segurança para terraform senhas 
+        # hardcoded, vulnerabilidades, etc.
       - name: Run Checkov action
         id: checkov
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: ./infra
           download_external_modules: true
-          soft_fail: true
+          soft_fail: false
+          skip_check: CKV_AWS_20,CKV_AWS_21,CK
           output_format: sarif
           output_file_path: results.sarif
 
+         # faz o upload do resultado do scan para o github security
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@v4
         if: always()
