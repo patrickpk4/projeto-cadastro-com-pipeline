@@ -22,4 +22,3 @@ vpcs = {
     transit_subnets_cidr = []
   }
 }
-
