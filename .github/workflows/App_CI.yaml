@@ -54,7 +54,9 @@ jobs:
       id-token: write
       actions: write
       issues: write
-    secrets: inherit             
+    secrets: 
+       AWS_ROLE: ${{ secrets.AWS_ROLE }}
+                  
 
       
 
