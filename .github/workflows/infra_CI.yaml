@@ -37,7 +37,9 @@ jobs:
             -backend-config="region=${{ vars.REGION }}"
 
 
-
+        # executa o terraform plan e gera o arquivo tfplan
+        # a variavel de ambiente tfvars é usada para 
+        # passar o arquivo de variaveis do terraform
       - name: Terraform Plan
         working-directory: ./infra
         env:
@@ -47,7 +49,7 @@ jobs:
           terraform plan \
             -var-file="terraform.tfvars" \
             -out=tfplan
-
+        # o arquivo tfplan é gerado e salvo como artefato para ser usado no job de deploy 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -61,4 +63,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    secrets: inherit
+    secrets: 
+      AWS_ROLE: ${{ secrets.AWS_ROLE }}
+      BUCKET: ${{ secrets.BUCKET }}
+      KEY: ${{ secrets.KEY }}
+      TF_VARS: ${{ secrets.TF_VARS }}

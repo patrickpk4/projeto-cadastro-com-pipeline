@@ -22,11 +22,4 @@ output "ecr_repository_url" {
   value       = aws_ecr_repository.catalogo_api.repository_url
 }
 
-# Nomes dos segredos cujos valores são preenchidos fora do Terraform.
-output "mongodb_secrets_manager_names" {
-  description = "Secrets Manager secret names for each environment"
-  value = {
-    for environment, secret in aws_secretsmanager_secret.mongodb :
-    environment => secret.name
-  }
-}
+
