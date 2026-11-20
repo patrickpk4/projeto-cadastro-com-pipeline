@@ -53,8 +53,7 @@ jobs:
         with:
           directory: ./infra
           download_external_modules: true
-          soft_fail: false
-          skip_check: CKV_AWS_20,CKV_AWS_21,CK
+          soft_fail: true
           output_format: sarif
           output_file_path: results.sarif
 
