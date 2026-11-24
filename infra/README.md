@@ -10,6 +10,8 @@ Esta infraestrutura usa três states independentes no mesmo bucket S3:
 
 O root `infra/spoke/` contém o código compartilhado pelas duas spokes. Selecione staging ou production com `infra/envs/<ambiente>.tfvars`; cada uma lê os outputs do hub por `terraform_remote_state`. O hub não deve ler os states das spokes.
 
+O módulo EKS em `spoke/main.tf` usa o commit upstream completo do release `v21.30.2`. Esse release declara internamente o módulo KMS `terraform-aws-modules/kms/aws` na versão exata `4.0.0` do Terraform Registry. O Checkov `CKV_TF_1` exige hash Git também para esse módulo transitivo; mantenha uma exceção controlada e restrita a `module.eks[0].kms` ao atualizar a pipeline, sem desabilitar o check globalmente.
+
 Inicialize cada stack com o bucket e a região do laboratório:
 
 ```sh
