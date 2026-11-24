@@ -52,21 +52,21 @@ Consulte o Swagger do ambiente para ver o contrato publicado pela versão atualm
 
 ```mermaid
 flowchart LR
-    Client[Cliente / Swagger] --> ALB[ALB público no hub]
+    Client[Cliente / Swagger] --> ALB[ALB na VPC hub]
     ALB --> TGW[Transit Gateway]
-    TGW --> API[Service ClusterIP / Deployment .NET 8]
-    API --> DB[Service headless]
-    DB --> Mongo[StatefulSet MongoDB]
+    TGW --> APIS[API no EKS staging]
+    TGW --> APIP[API no EKS production]
+    APIS --> DBS[MongoDB staging]
+    APIP --> DBP[MongoDB production]
 
-    API -. OTLP HTTP :4318 .-> Collector[OpenTelemetry Collector]
-    Collector -. Prometheus scrape :8889 .-> Prom[Prometheus]
-    Prom --> Grafana[Grafana dashboards]
-
-    Terraform[Terraform] --> AWS[VPC e Amazon EKS]
-    Actions[GitHub Actions] --> ECR[Amazon ECR]
-    ECR --> API
+    Terraform[Terraform] --> Hub[VPC hub e TGW]
+    Terraform --> Staging[VPC spoke + EKS staging]
+    Terraform --> Production[VPC spoke + EKS production]
+    Actions[GitHub Actions] --> ECRS[ECR staging]
+    Actions --> ECRP[ECR production]
     Secrets[AWS Secrets Manager] --> Actions
-    Actions --> AWS
+    ECRS --> APIS
+    ECRP --> APIP
 ```
 
 ### Fluxo de métricas
@@ -90,7 +90,7 @@ API .NET 8
 | Banco de dados | MongoDB 4.4.0 |
 | Containers | Docker; imagem da API publicada no Amazon ECR |
 | Orquestração | Kubernetes no Amazon EKS; Deployments, StatefulSets, Services, HPAs, RBAC e NetworkPolicies |
-| Infraestrutura | Terraform >= 1.7; AWS Provider `~> 6.67`; módulo EKS `~> 21.0`; módulos de VPC e rede locais |
+| Infraestrutura | Terraform >= 1.7; AWS Provider `~> 6.67`; módulo EKS `21.30.2`; módulos de VPC e rede locais |
 | Observabilidade | OpenTelemetry Operator e Collector Contrib 0.160.0, Prometheus, Grafana e `kube-prometheus-stack` chart 92.3.0 |
 | CI/CD e qualidade | GitHub Actions, xUnit, SonarCloud, Trivy, Checkov |
 
@@ -177,107 +177,68 @@ dotnet test src/PedeLogo.Catalogo.sln
 
 O código em [`infra/`](./infra/) cria as VPCs, os recursos de rede e os clusters EKS com Terraform.
 
-### Topologia e fluxos de rede
+### Topologia e isolamento
 
-![Diagrama da arquitetura AWS com VPC hub, Transit Gateway e clusters EKS](./infra/architecture.svg)
+Há uma VPC hub compartilhada e uma VPC spoke independente para cada ambiente. O hub contém o Transit Gateway, o NAT Gateway e o ALB; cada state de ambiente controla somente sua VPC spoke, o attachment/rotas próprios, o cluster EKS e o ECR daquele ambiente. As spokes usam o hub para tráfego com a Internet e com o ALB; as rotas `blackhole` impedem comunicação direta entre staging e production. A configuração `cluster_names` e os CIDRs em `peer_vpc_cidrs` no tfvars do hub devem corresponder aos tfvars dos dois ambientes.
 
-O diagrama representa os recursos declarados em Terraform e nos manifests Kubernetes. Os CIDRs abaixo são exemplos; o plano e a configuração real vêm de `TF_VARS`.
+| Stack | VPC | Subnets | Recursos |
+|---|---|---|---|
+| Hub | `10.0.0.0/16` | Públicas `10.0.1.0/24`, `10.0.2.0/24`; trânsito `10.0.11.0/24`, `10.0.12.0/24` | IGW, NAT, ALB, Transit Gateway |
+| Staging | `10.1.0.0/16` | Privadas `10.1.11.0/24`, `10.1.12.0/24` | TGW attachment, EKS, ECR staging |
+| Production | `10.2.0.0/16` | Privadas `10.2.11.0/24`, `10.2.12.0/24` | TGW attachment, EKS, ECR production |
 
-| VPC | Subnets | Uso |
-|---|---|---|
-| Hub (`10.0.0.0/16`) | Públicas `10.0.1.0/24`, `10.0.2.0/24` | ALB e NAT Gateway; rota para o Internet Gateway |
-| Hub (`10.0.0.0/16`) | Privadas `10.0.11.0/24`, `10.0.12.0/24` | Subnets dedicadas ao attachment do Transit Gateway; sem workloads |
-| Staging (`10.1.0.0/16`) | Privadas `10.1.11.0/24`, `10.1.12.0/24` | EKS Auto Mode e pods da API e MongoDB |
-| Production (`10.2.0.0/16`) | Privadas `10.2.11.0/24`, `10.2.12.0/24` | EKS Auto Mode e pods da API e MongoDB |
+O ALB do hub tem listener HTTP na porta **80 para staging** e **8080 para production**, ambos com target groups IP próprios. O NAT do hub é compartilhado e está em uma única AZ; não há NAT redundante por AZ.
 
-O arquivo [`infra/terraform.tfvars.example`](./infra/terraform.tfvars.example) contém esses valores de referência. Os três CIDRs de VPC são faixas privadas RFC1918, não se sobrepõem, e as subnets de trânsito pertencem ao CIDR do hub.
+O mesmo root e provider Terraform usam três arquivos de variáveis:
 
-#### Entrada da aplicação
+- [`infra/environments/hub/terraform.tfvars.example`](./infra/environments/hub/terraform.tfvars.example)
+- [`infra/environments/staging/terraform.tfvars.example`](./infra/environments/staging/terraform.tfvars.example)
+- [`infra/environments/production/terraform.tfvars.example`](./infra/environments/production/terraform.tfvars.example)
 
-```text
-Cliente → ALB público no hub → TGW → target group IP → pod da API
-```
+Os arquivos reais `terraform.tfvars` ficam ignorados pelo Git. As três chaves no mesmo bucket são `infra/hub/terraform.tfstate`, `infra/staging/terraform.tfstate` e `infra/production/terraform.tfstate`. Staging e production leem somente os outputs do state hub; nenhum ambiente lê o state do outro.
 
-- O ALB tem listeners HTTP: **porta 80 para staging** e **porta 8080 para production**. Ambos usam o DNS do mesmo ALB; sem domínio próprio, o ambiente é selecionado pela porta. Não há TLS configurado.
-- Cada listener aponta para seu target group, que usa IPs dos pods e health check HTTP em `/health:8080`. O TargetGroupBinding de cada cluster registra os IPs selecionados pelo Service `api-service`.
-- O Service é `ClusterIP` na porta 80 e direciona para a porta 8080 do container. Portanto, o Service não é um load balancer público nem recebe tráfego direto da Internet.
-- A aplicação e o MongoDB ficam nas subnets privadas das VPCs spoke. O MongoDB só é exposto internamente pelo Service headless na porta 27017.
+> **Atenção:** os endpoints públicos do EKS estão habilitados. Restrinja `endpoint_public_access_cidrs` aos IPs administrativos ou desabilite o acesso público quando possível. Consulte [a documentação da AWS sobre endpoints do EKS](https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html).
 
-**A API do EKS é uma entrada administrativa diferente da aplicação.** O endpoint público e o privado estão habilitados; o código não define uma lista restrita de CIDRs para o público. Assim, o endpoint público fica alcançável pela rede, embora ainda exija autenticação IAM e autorização Kubernetes. Restrinja `endpoint_public_access_cidrs` ao IP administrativo ou desabilite o acesso público se a administração puder ocorrer pela rede privada. Consulte [a documentação da AWS sobre endpoints do EKS](https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html).
+### States, planos e promoção
 
-#### Saída centralizada e isolamento
+Inicialize e aplique o state hub uma vez antes de usar os states de ambiente; staging e production precisam ler seus outputs para anexar ao TGW. O hub é a rede compartilhada e tem ciclo de manutenção próprio; o workflow de promoção abaixo não aplica mudanças nele.
+
+Em um PR para `main`, o workflow executa Terraform validate, TFLint, Checkov, Infracost e planos somente de leitura para staging e production. Após o merge, a mesma execução e o mesmo SHA seguem esta ordem:
 
 ```text
-Pod/nó em staging ou production
-  → route table da subnet privada (0.0.0.0/0 → TGW)
-  → route table TGW da spoke (0.0.0.0/0 → attachment do hub)
-  → subnet de trânsito do hub (0.0.0.0/0 → NAT)
-  → NAT Gateway na subnet pública
-  → Internet Gateway
-  → Internet
+Plan staging → Apply do plan staging → infra_test_cluster.yaml (smoke tests)
+  → Plan production → aprovação do GitHub Environment production
+  → Apply do plan production salvo
 ```
 
-- As VPCs staging e production não têm IGW nem NAT próprios. A tabela de rotas do TGW do hub contém as rotas de retorno para cada spoke.
-- Cada tabela TGW de spoke também contém uma rota `blackhole` para a outra VPC; isso impede tráfego direto entre os ambientes mesmo com a rota padrão para o hub.
-- Existe **um NAT Gateway**, na primeira subnet pública configurada. Isso centraliza o egress, mas cria um ponto único de falha e pode gerar custo de tráfego entre AZs. O exemplo distribui subnets em duas AZs, mas não cria um NAT por AZ.
-- A tabela de rotas força o caminho pelo TGW/NAT; o Security Group não escolhe o próximo salto. Por outro lado, a NetworkPolicy da API limita o egress dos pods a MongoDB e DNS. Essas políticas só são aplicadas se o plugin de rede do EKS suportar NetworkPolicy.
+O plano de production é criado **depois** dos testes de staging e é aplicado como artefato salvo após a aprovação. Ele é gerado para o state e as variáveis de production do mesmo commit; o binário do plano de staging não pode ser reaplicado contra outro state.
 
-#### Security Groups e NetworkPolicies
+Configure revisores obrigatórios em **Settings → Environments → production** para habilitar a aprovação manual. O bucket S3 permanece o mesmo; cada stack usa sua própria chave de backend. A role OIDC `AWS_ROLE` precisa ler o state hub, ler/atualizar os states staging e production e administrar os recursos AWS.
 
-| Origem | Regra configurada |
-|---|---|
-| Internet → SG do ALB | TCP 80 e 8080 de `0.0.0.0/0` |
-| SG do ALB → VPCs dos clusters | Egress TCP 8080 para os CIDRs das VPCs spoke |
-| SG primário do cluster EKS | Ingress TCP 8080 com origem no SG do ALB, usando referência de SG pelo TGW |
-| Egress padrão do cluster | O SG gerenciado pelo EKS permite egress; as route tables ainda direcionam o tráfego das spokes pelo TGW |
-| Pods da API | NetworkPolicy restringe entrada ao CIDR das subnets públicas do hub e saída a MongoDB/DNS |
-| Pod MongoDB | NetworkPolicy permite comunicação interna com a API na porta 27017 |
+Para executar localmente, use o arquivo do ambiente explicitamente e inicialize o backend com a chave correspondente:
 
-O Security Group controla o tráfego nas interfaces de rede; as NetworkPolicies controlam tráfego entre pods. O MongoDB é um pod, não uma instância com Security Group próprio. Também não há PVC no StatefulSet atual, então o armazenamento do MongoDB não deve ser considerado persistente.
-
-#### Recursos de apoio
-
-- **ECR:** repositório privado da imagem `catalogo-api`, consumida pelos clusters.
-- **Secrets Manager:** segredos separados de staging e production; o CD lê o segredo do ambiente e cria o `mongodb-secret` no cluster.
-- **S3:** backend remoto do estado Terraform, configurado pelos workflows.
-- **GitHub Actions:** autentica na AWS por OIDC para publicar imagem, ler segredos e executar o deploy. O EKS Auto Mode cuida do provisionamento de nós; não há quantidade fixa de nós definida nesse módulo.
-
-> **Atenção:** se alterar os CIDRs das subnets públicas do hub, atualize as regras da [NetworkPolicy da API](./k8s/cadastro-k8s/networkpolicy-cadastro.yaml) para manter o tráfego do ALB permitido.
-
-### Variáveis e pipeline
-
-`transit_subnets_cidr` é obrigatório em **cada** entrada de `vpcs`: use CIDRs livres dentro da VPC hub e listas vazias nas VPCs spoke. O exemplo completo também inclui os campos obrigatórios de EKS. Ajuste os CIDRs à sua rede real, sem sobreposição:
-
-```hcl
-hub        = { cidr_block = "10.0.0.0/16", transit_subnets_cidr = ["10.0.11.0/24", "10.0.12.0/24"] }
-staging    = { cidr_block = "10.1.0.0/16", transit_subnets_cidr = [] }
-production = { cidr_block = "10.2.0.0/16", transit_subnets_cidr = [] }
+```bash
+cd infra
+export TF_VAR_state_bucket="<bucket>"
+terraform init -reconfigure \
+  -backend-config="bucket=<bucket>" \
+  -backend-config="key=infra/hub/terraform.tfstate" \
+  -backend-config="region=us-east-1"
+terraform plan -var-file=environments/hub/terraform.tfvars
+terraform apply -var-file=environments/hub/terraform.tfvars
 ```
 
-A pipeline grava o secret `TF_VARS` em `terraform.tfvars`; mantenha nele a mesma estrutura e os mesmos CIDRs coerentes com as NetworkPolicies.
+Após o apply do hub, inicialize staging e production com suas chaves e arquivos `terraform.tfvars` correspondentes; exporte `TF_VAR_state_bucket=<bucket>` antes do plan para ler os outputs do hub. Para destruir o laboratório, remova primeiro staging e production (attachments e rotas) e, por último, o hub. O state legado não é migrado automaticamente; não o apague enquanto ainda controlar recursos ativos.
 
-A role AWS informada por `AWS_ROLE` precisa de permissões para criar e administrar Transit Gateways, anexos, rotas, route tables, subnets e tags. A pipeline de staging também consulta o ALB (`elasticloadbalancing:DescribeLoadBalancers`). Por exemplo, a criação do gateway exige `ec2:CreateTransitGateway`. Um erro `UnauthorizedOperation` deve ser corrigido na policy IAM dessa role.
+### ECR e segredos externos
 
-Os outputs `staging_url` e `production_url` informam os endereços após o apply (`http://<DNS-do-ALB>` e `http://<DNS-do-ALB>:8080`). A pipeline fornece bucket, chave e região do backend S3; não inclua credenciais em arquivos versionados.
+O Terraform cria repositórios ECR separados (`catalogo-api-staging` e `catalogo-api-production`), com tags imutáveis, scan ao publicar e retenção das 30 imagens tagueadas mais recentes. O CI publica a imagem do mesmo SHA nos dois repositórios.
 
-### Amazon ECR e AWS Secrets Manager
+Os segredos `projeto-cadastro/staging/mongodb` e `projeto-cadastro/production/mongodb` permanecem no AWS Secrets Manager e são externos ao Terraform. O CD lê o segredo do ambiente e cria/atualiza o `mongodb-secret` no cluster; não grave credenciais nos arquivos de variáveis. A role OIDC do CD precisa de `secretsmanager:GetSecretValue` nos dois segredos e `secretsmanager:ListSecrets` em `Resource: "*"`. Com uma chave KMS gerenciada pelo cliente, conceda também `kms:Decrypt`.
 
-O Terraform cria o repositório ECR `catalogo-api` (tags imutáveis, scan ao publicar e retenção das 30 imagens tagueadas mais recentes) e os segredos vazios `projeto-cadastro/staging/mongodb` e `projeto-cadastro/production/mongodb`. Ele **não** grava valores de credenciais no state. Depois do `apply`, preencha cada segredo no AWS Secrets Manager como JSON:
+A role dos workflows precisa de `ecr:GetAuthorizationToken` em `Resource: "*"`, permissões de push nos dois repositórios e permissões de pull para os nós EKS. A role Terraform precisa administrar VPC/TGW, rotas, EKS, ECR e tags; ajuste as permissões e ARNs à conta e região do laboratório.
 
-```json
-{
-  "MONGO_INITDB_ROOT_USERNAME": "<usuario>",
-  "MONGO_INITDB_ROOT_PASSWORD": "<senha>"
-}
-```
-
-Use valores distintos para staging e production e não salve esse payload em arquivos do repositório nem em `terraform.tfvars`. O CD busca o segredo do ambiente com a action Marketplace `aws-actions/aws-secretsmanager-get-secrets@v2` e cria/atualiza o Secret Kubernetes `mongodb-secret` antes do deploy. A role OIDC `AWS_ROLE` usada pelos workflows precisa de `secretsmanager:GetSecretValue` nos dois segredos e `secretsmanager:ListSecrets` (esta última exige `Resource: "*"`) para a action; se usar uma chave KMS gerenciada pelo cliente, também precisa de `kms:Decrypt`.
-
-A role OIDC compartilhada pelos workflows precisa de `ecr:GetAuthorizationToken` em `Resource: "*"`; para o CI publicar imagens, também precisa de `ecr:BatchCheckLayerAvailability`, `ecr:CompleteLayerUpload`, `ecr:InitiateLayerUpload`, `ecr:PutImage` e `ecr:UploadLayerPart` no repositório. Para ler os segredos no CD, conceda `secretsmanager:GetSecretValue` nos segredos de staging e production e `secretsmanager:ListSecrets` em `Resource: "*"`. Os nós EKS precisam de permissão de pull do ECR (o EKS Auto Mode associa `AmazonEC2ContainerRegistryPullOnly`).
-
-A role de Terraform também precisa de `ecr:CreateRepository`, `ecr:DescribeRepositories`, `ecr:DeleteRepository`, `ecr:PutLifecyclePolicy`, `ecr:GetLifecyclePolicy`, `ecr:DeleteLifecyclePolicy`, `ecr:TagResource` e `ecr:UntagResource` no repositório, e de `secretsmanager:CreateSecret`, `secretsmanager:DescribeSecret`, `secretsmanager:TagResource`, `secretsmanager:UntagResource` e `secretsmanager:DeleteSecret` nos metadados dos segredos. Ajuste os ARNs de recursos à conta e região do laboratório.
-
-As imagens da API são publicadas com tag única baseada no SHA e na tentativa do workflow, para que reexecuções não conflitem com a imutabilidade do repositório. MongoDB e demais imagens públicas continuam em seus registries atuais.
+Configure no GitHub Actions os secrets `AWS_ROLE`, `BUCKET`, `TF_VARS_STAGING`, `TF_VARS_PRODUCTION` e `INFRACOST_API_KEY`. As variáveis usadas incluem `REGION`, `TF_VERSION`, `eks_stg` e `eks_prod`. Os segredos MongoDB e as credenciais de testes da aplicação continuam separados.
 
 Os comandos locais de validação, dentro de `infra/`, são:
 
@@ -287,13 +248,11 @@ terraform fmt -check -recursive
 terraform validate
 ```
 
-Para criar ou modificar infraestrutura, confira o ambiente/contexto, backend e plano antes de executar `terraform apply`. A automação usa os ambientes e permissões configurados no GitHub Actions.
-
 ## Aplicação no Kubernetes
 
-A API e o MongoDB são implantados no namespace `default`. A API usa um Service `ClusterIP` na porta 80 e é exposta pelo ALB do hub; staging usa a porta 80 e production a porta 8080. O MongoDB é acessível internamente por um Service headless na porta 27017.
+A API e o MongoDB são implantados no namespace `default`. A API usa um Service `ClusterIP` na porta 80 e é exposta pelo ALB compartilhado no hub através do TGW: staging usa a porta 80 e production a porta 8080. O MongoDB é acessível internamente por um Service headless na porta 27017.
 
-O manifesto da API contém placeholders de registry e tag; a pipeline injeta a imagem publicada no ECR. O EKS Auto Mode permite que os nós baixem essa imagem sem `imagePullSecret`. O MongoDB usa StatefulSet, probes de saúde, recursos requests/limits e políticas de rede. As credenciais são obtidas do Secrets Manager e materializadas como `mongodb-secret` durante o CD.
+O manifesto da API contém placeholders de registry e tag; a pipeline seleciona o repositório ECR do ambiente e injeta a imagem publicada. O EKS Auto Mode permite que os nós baixem essa imagem sem `imagePullSecret`. O MongoDB usa StatefulSet, probes de saúde, recursos requests/limits e políticas de rede. As credenciais são obtidas do Secrets Manager e materializadas como `mongodb-secret` durante o CD.
 
 Guia de pré-requisitos, implantação, configuração, autoscaling e diagnóstico: [`k8s/README.md`](./k8s/README.md).
 
@@ -312,9 +271,7 @@ Os workflows ficam em `.github/workflows/`. O comportamento abaixo resume os gat
 | Testes da aplicação (`App_testeEstatico.yaml`) | Push para `feature/**`, `hotfix/**` ou `main`, e PR para `main`; alterações em `src/**` | Testes unitários, integração com MongoDB, cobertura e análise SonarCloud |
 | Build de imagem (`App_CI.yaml`) | Reutilizável; chamado pelo workflow de testes em PR após os jobs de qualidade | OIDC na AWS, buildx, scan Trivy para vulnerabilidades CRITICAL e push ao ECR com tag única SHA/tentativa |
 | CD da aplicação (`App_CD.yaml`, `App_CD_prod.yaml`) | Workflows reutilizáveis chamados pelo fluxo da aplicação | Login no ECR, leitura do segredo específico do ambiente e deploy no EKS; usa GitHub Environments `staging` e `production` |
-| Validação Terraform (`infra_teste_Statico.yaml`) | Push para `feature/**` ou `hotfix/**`; alterações em `infra/**` | `terraform init -backend=false`, validate, fmt e Checkov (configurado como soft-fail) |
-| Plan e deploy staging (`infra_CI.yaml`, `infra_CD.yaml`) | PR para `main`; alterações em `infra/**` | Gera plano, aplica o artefato em staging e executa teste de cluster |
-| Plan e deploy production (`infra_CI_Prod.yaml`, `infra_CD_Prod.yaml`) | Push para `main`; alterações em `infra/**` | Gera plano e executa apply em production |
+| Infraestrutura (`infra_CI.yaml`, `infra_CD.yaml`) | PR e push para `main`; alterações em `infra/**` ou no workflow de infra | PR valida, roda TFLint, Checkov, Infracost e planos sem apply; merge promove staging, roda `infra_test_cluster.yaml`, gera o plan production e aguarda aprovação antes de aplicar o artefato salvo |
 
 > Revise os gatilhos dos workflows e as proteções dos GitHub Environments antes de adotar a pipeline em produção. A aprovação manual depende da configuração dos environments no GitHub; ela não é garantida apenas pelo nome do ambiente no YAML.
 
@@ -322,8 +279,8 @@ Os workflows ficam em `.github/workflows/`. O comportamento abaixo resume os gat
 
 Os workflows dependem de configurações em **Settings → Secrets and variables → Actions** e de environments `staging` e `production`. Entre os nomes referenciados pelos workflows estão:
 
-- Secrets: `AWS_ROLE`, `BUCKET`, `KEY`, `TF_VARS`, `mongo_user`, `mongo_pwd`, `SONAR_PROJECT_KEY`, `SONAR_ORGANIZATION`, `SONAR_TOKEN`. `mongo_user`/`mongo_pwd` continuam sendo usados pelos testes de integração; credenciais dos clusters ficam no Secrets Manager.
-- Variables: `REGION`, `CLUSTER_NAME`, `TF_VERSION`.
+- Secrets: `AWS_ROLE`, `BUCKET`, `TF_VARS_STAGING`, `TF_VARS_PRODUCTION`, `INFRACOST_API_KEY`, `mongo_user`, `mongo_pwd`, `SONAR_PROJECT_KEY`, `SONAR_ORGANIZATION`, `SONAR_TOKEN`. `mongo_user`/`mongo_pwd` continuam sendo usados pelos testes de integração; credenciais dos clusters ficam no Secrets Manager.
+- Variables: `REGION`, `TF_VERSION`, `eks_stg`, `eks_prod`, `CLUSTER_NAME`.
 
 Configure as credenciais AWS via OIDC conforme os workflows e limite permissões às funções necessárias. Os valores reais devem ser definidos no GitHub, nunca copiados para documentação ou commits.
 

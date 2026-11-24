@@ -38,7 +38,7 @@ resource "aws_subnet" "private_subnet" {
   }
 }
 
-# Cria subnets privadas dedicadas ao anexo do Transit Gateway.
+# Cria subnets dedicadas ao attachment do Transit Gateway na VPC hub.
 resource "aws_subnet" "transit_subnet" {
   count                   = length(var.transit_subnets_cidr)
   vpc_id                  = aws_vpc.vpc.id
@@ -51,4 +51,3 @@ resource "aws_subnet" "transit_subnet" {
     terraform = "true"
   }
 }
-

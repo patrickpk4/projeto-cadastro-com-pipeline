@@ -23,7 +23,7 @@ variable "private_subnets_cidr" {
   type = list(string)
 }
 
-# Faixas de IP das subnets privadas de trânsito no hub.
+# Faixas de IP das subnets de trânsito da VPC hub.
 variable "transit_subnets_cidr" {
   type = list(string)
 }
