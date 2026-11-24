@@ -11,18 +11,21 @@ Este diretório contém os manifests Kubernetes da API PedeLogo Catálogo e do M
 
 ```text
 Cliente
-  -> ALB do hub (staging :80 ou production :8080)
+  -> ALB compartilhado no hub (staging :80 ou production :8080)
   -> Transit Gateway
-  -> TargetGroupBinding -> Service api-service (ClusterIP :80)
+  -> TargetGroupBinding do ambiente
+  -> Service api-service (ClusterIP :80)
   -> Deployment api-deployment (.NET 8, container :8080)
   -> Service mongo-service (headless :27017)
   -> StatefulSet mongodb-statefulset (MongoDB 4.4.0)
 ```
 
+Staging e production têm VPC, EKS, state e subnets privadas próprios. Ambos se conectam ao hub por attachments e rotas TGW; rotas `blackhole` impedem comunicação direta entre as VPCs dos ambientes. O ALB e a saída para a Internet ficam no hub compartilhado.
+
 | Componente | Recurso | Configuração |
 |---|---|---|
 | API de catálogo | Deployment `api-deployment` | 1 réplica inicial; imagem publicada no Amazon ECR; probes `/read` e `/health`; recursos requests 200m CPU/256Mi e limits 500m CPU/384Mi |
-| Acesso à API | Service `api-service` | Tipo `ClusterIP`; TargetGroupBinding registra os IPs dos pods no target group do ALB central |
+| Acesso à API | Service `api-service` | Tipo `ClusterIP`; o TargetGroupBinding registra os IPs dos pods no target group do ambiente no ALB compartilhado |
 | Banco | StatefulSet `mongodb-statefulset` | MongoDB 4.4.0, 1 réplica, porta 27017, startup/readiness/liveness probes e recursos definidos |
 | Acesso ao banco | Service `mongo-service` | Headless Service, porta 27017, descoberta interna no namespace `default` |
 | Configuração da API | ConfigMap `catalogo-config` | Host, porta e nome do banco MongoDB |
@@ -89,7 +92,7 @@ kubectl apply -f k8s/environments/staging/targetgroupbinding.yaml
 kubectl apply -f k8s/environments/production/targetgroupbinding.yaml
 ```
 
-O DNS é o mesmo para os dois ambientes: staging usa a porta 80 e production a porta 8080. Consulte `terraform output -raw staging_url` e `terraform output -raw production_url` no diretório `infra/`. Não remova um TargetGroupBinding isoladamente: o EKS Auto Mode pode excluir o target group associado.
+O DNS do ALB é compartilhado; staging usa a porta 80 e production a porta 8080. Consulte `terraform output -raw application_url` no state e diretório de variáveis do ambiente correspondente. Não remova um TargetGroupBinding isoladamente: o EKS Auto Mode pode excluir o target group associado.
 
 O Deployment aguarda o MongoDB na inicialização. Se ele não ficar pronto, verifique os pods, eventos e logs antes de reiniciar os workloads:
 
@@ -116,7 +119,7 @@ Se os valores de uso aparecerem como `<unknown>`, confira se o Metrics Server es
 - API: readiness em `/read`; liveness em `/health`.
 - ALB: health check em `/health`, porta 8080 nos pods.
 - MongoDB: startup e liveness executam `db.adminCommand('ping')`; readiness testa a porta TCP 27017.
-- NetworkPolicies limitam a entrada da API aos CIDRs das subnets públicas do hub e o acesso ao MongoDB aos pods da API; atualize os CIDRs da política da API se alterar as subnets do hub.
+- NetworkPolicies limitam a entrada da API aos CIDRs das subnets públicas do hub e o acesso ao MongoDB aos pods da API; atualize os CIDRs da política da API se alterar as subnets públicas do hub.
 
 Consulte políticas e endpoints para diagnosticar conectividade:
 

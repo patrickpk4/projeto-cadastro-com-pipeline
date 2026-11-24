@@ -1,6 +1,7 @@
 # Guarda as imagens da API; tags imutáveis evitam sobrescrever builds publicados.
 resource "aws_ecr_repository" "catalogo_api" {
-  name                 = "catalogo-api"
+  count                = 1
+  name                 = "catalogo-api-${var.environment}"
   image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
@@ -12,14 +13,16 @@ resource "aws_ecr_repository" "catalogo_api" {
   }
 
   tags = {
-    Name      = "catalogo-api"
-    Terraform = "true"
+    Name        = "catalogo-api-${var.environment}"
+    Environment = var.environment
+    Terraform   = "true"
   }
 }
 
 # Remove camadas órfãs e limita a quantidade de imagens antigas mantidas.
 resource "aws_ecr_lifecycle_policy" "catalogo_api" {
-  repository = aws_ecr_repository.catalogo_api.name
+  count      = 1
+  repository = aws_ecr_repository.catalogo_api[0].name
 
   policy = jsonencode({
     rules = [

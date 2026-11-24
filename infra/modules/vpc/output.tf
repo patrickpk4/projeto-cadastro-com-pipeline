@@ -13,7 +13,6 @@ output "private_subnet_ids" {
   value = aws_subnet.private_subnet[*].id
 }
 
-# Retorna os IDs das subnets dedicadas ao Transit Gateway.
 output "transit_subnet_ids" {
   value = aws_subnet.transit_subnet[*].id
 }

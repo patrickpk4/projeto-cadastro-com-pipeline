@@ -1,4 +1,3 @@
-# Permite HTTP público nas portas usadas pelos ambientes staging e production.
 resource "aws_security_group" "hub_load_balancer" {
   name        = "hub-load-balancer"
   description = "Allow public HTTP traffic to the hub load balancer"
@@ -20,7 +19,6 @@ resource "aws_security_group" "hub_load_balancer" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Limita o tráfego de saída do ALB às VPCs dos clusters e à porta dos targets.
   dynamic "egress" {
     for_each = var.target_vpc_cidr_blocks
     content {
@@ -38,7 +36,6 @@ resource "aws_security_group" "hub_load_balancer" {
   }
 }
 
-# Cria o ALB público nas subnets públicas do hub.
 resource "aws_lb" "hub" {
   name               = "hub-public"
   internal           = false
@@ -52,7 +49,6 @@ resource "aws_lb" "hub" {
   }
 }
 
-# Cria um target group IP por ambiente para registrar os endereços dos pods.
 resource "aws_lb_target_group" "environment" {
   for_each = var.target_group_cluster_names
 
@@ -77,7 +73,6 @@ resource "aws_lb_target_group" "environment" {
   }
 }
 
-# Encaminha cada porta pública ao target group correspondente.
 resource "aws_lb_listener" "environment" {
   for_each = {
     staging    = 80
