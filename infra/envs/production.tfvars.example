@@ -1,3 +1,4 @@
+# xemplo de como configurar seu tfvars
 aws_region         = "us-east-1"
 environment        = "production"
 cluster_name       = "EKSproduction"
