@@ -9,7 +9,7 @@ resource "aws_ecr_repository" "catalogo_api" {
   }
 
   encryption_configuration {
-    encryption_type = "AES256"
+    encryption_type = "KMS"
   }
 
   tags = {

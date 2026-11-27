@@ -1,12 +1,117 @@
 {
   "failed_checks": [
     {
-      "file": "infra/spoke/.terraform/modules/eks/main.tf",
+      "file": "/.external_modules/github.com/terraform-aws-modules/terraform-aws-eks/25c846a384bc66d16cc801d2f851431deb38de5d/main.tf",
       "findings": [
+        {
+          "resource": "module.eks[0].aws_eks_cluster.this",
+          "check_ids": [
+            "CKV_AWS_38",
+            "CKV_AWS_39",
+            "CKV_AWS_58",
+            "CKV_AWS_37"
+          ]
+        },
+        {
+          "resource": "module.eks[0].aws_cloudwatch_log_group.this[0]",
+          "check_ids": [
+            "CKV_AWS_338"
+          ]
+        },
         {
           "resource": "module.eks[0].kms",
           "check_ids": [
             "CKV_TF_1"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/.external_modules/github.com/terraform-aws-modules/terraform-aws-eks/25c846a384bc66d16cc801d2f851431deb38de5d/modules/eks-managed-node-group/main.tf",
+      "findings": [
+        {
+          "resource": "module.eks[0].module.eks_managed_node_group.aws_security_group.this",
+          "check_ids": [
+            "CKV2_AWS_5"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/.external_modules/github.com/terraform-aws-modules/terraform-aws-eks/25c846a384bc66d16cc801d2f851431deb38de5d/modules/self-managed-node-group/main.tf",
+      "findings": [
+        {
+          "resource": "module.eks[0].module.self_managed_node_group.aws_security_group.this",
+          "check_ids": [
+            "CKV2_AWS_5"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/.external_modules/github.com/terraform-aws-modules/terraform-aws-eks/25c846a384bc66d16cc801d2f851431deb38de5d/node_groups.tf",
+      "findings": [
+        {
+          "resource": "module.eks[0].aws_security_group.node[0]",
+          "check_ids": [
+            "CKV2_AWS_5"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/modules/network/load_balancer.tf",
+      "findings": [
+        {
+          "resource": "module.network[0].aws_lb.hub",
+          "check_ids": [
+            "CKV2_AWS_20",
+            "CKV2_AWS_28",
+            "CKV_AWS_150",
+            "CKV_AWS_91"
+          ]
+        },
+        {
+          "resource": "module.network[0].aws_lb_listener.environment[\"production\"]",
+          "check_ids": [
+            "CKV_AWS_103",
+            "CKV_AWS_2"
+          ]
+        },
+        {
+          "resource": "module.network[0].aws_lb_listener.environment[\"staging\"]",
+          "check_ids": [
+            "CKV_AWS_103",
+            "CKV_AWS_2"
+          ]
+        },
+        {
+          "resource": "module.network[0].aws_lb_target_group.environment[\"production\"]",
+          "check_ids": [
+            "CKV_AWS_378"
+          ]
+        },
+        {
+          "resource": "module.network[0].aws_lb_target_group.environment[\"staging\"]",
+          "check_ids": [
+            "CKV_AWS_378"
+          ]
+        },
+        {
+          "resource": "module.network[0].aws_security_group.hub_load_balancer",
+          "check_ids": [
+            "CKV_AWS_260"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "/modules/vpc/main.tf",
+      "findings": [
+        {
+          "resource": "module.vpc.aws_vpc.vpc",
+          "check_ids": [
+            "CKV2_AWS_11"
           ]
         }
       ]

@@ -103,6 +103,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Use example variables for pull requests
+        id: checkov_example_vars
+        if: github.event_name == 'pull_request'
+        run: echo "file=./infra/envs/production.tfvars.example" >> "$GITHUB_OUTPUT"
+
+      - name: Write repository variables for branch scans
+        id: checkov_secret_vars
+        if: github.event_name == 'push'
+        env:
+          TF_VARS: ${{ secrets.TF_VARS }}
+        run: |
+          if [ -z "$TF_VARS" ]; then
+            echo "::error::Repository secret TF_VARS is required for Checkov on branch pushes"
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$TF_VARS" > infra/.checkov.auto.tfvars
+          echo "file=./infra/.checkov.auto.tfvars" >> "$GITHUB_OUTPUT"
+
         # Checkov é uma ferramenta de análise de segurança para infraestrutura como código (IaC).
         # Ele verifica arquivos de configuração de infraestrutura, como Terraform, CloudFormation e Kubernetes,
         # em busca de vulnerabilidades, más práticas e violações de políticas de segurança.
@@ -117,10 +136,14 @@ jobs:
           directory: ./infra
           download_external_modules: true
           baseline: ./.github/checkov/infra-baseline.json
-          skip_check: CKV_AWS_20,CKV_AWS_21
+          var_file: ${{ steps.checkov_secret_vars.outputs.file || steps.checkov_example_vars.outputs.file }}
           soft_fail: false
           output_format: sarif
           output_file_path: results.sarif
+
+      - name: Remove temporary variable file
+        if: always() && github.event_name == 'push'
+        run: rm -f -- infra/.checkov.auto.tfvars
 
       - name: Upload SARIF results
         if: always()
