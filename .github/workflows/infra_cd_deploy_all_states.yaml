@@ -72,11 +72,8 @@ jobs:
 
   smoke_test_staging:
     name: Smoke test staging
-    needs: [plan_staging, apply_staging]
-    if: >-
-      always() &&
-      needs.plan_staging.result == 'success' &&
-      (needs.apply_staging.result == 'success' || needs.apply_staging.result == 'skipped')
+    needs: apply_staging
+    if: needs.apply_staging.result == 'success'
     uses: ./.github/workflows/infra_test_cluster.yaml
     with:
       cluster_name: ${{ vars.eks_stg }}
@@ -87,9 +84,12 @@ jobs:
     needs: [plan_staging, apply_staging, smoke_test_staging]
     if: >-
       always() &&
+      github.ref == 'refs/heads/main' &&
       needs.plan_staging.result == 'success' &&
-      (needs.apply_staging.result == 'success' || needs.apply_staging.result == 'skipped') &&
-      needs.smoke_test_staging.result == 'success'
+      (
+        (needs.apply_staging.result == 'success' && needs.smoke_test_staging.result == 'success') ||
+        needs.apply_staging.result == 'skipped'
+      )
     uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
     with:
       stack_dir: infra/spoke
@@ -113,14 +113,8 @@ jobs:
 
   smoke_test_production:
     name: Smoke test production
-    needs:
-      - plan_production
-      - apply_production
-    if: >-
-      always() &&
-      github.ref == 'refs/heads/main' &&
-      needs.plan_production.result == 'success' &&
-      (needs.apply_production.result == 'success' || needs.apply_production.result == 'skipped')
+    needs: apply_production
+    if: github.ref == 'refs/heads/main' && needs.apply_production.result == 'success'
     uses: ./.github/workflows/infra_test_cluster.yaml
     with:
       cluster_name: ${{ vars.eks_prod }}
