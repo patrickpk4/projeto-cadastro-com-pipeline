@@ -1,7 +1,7 @@
 aws_region         = "us-east-1"
 environment        = "staging"
 cluster_name       = "EKSstaging"
-kubernetes_version = "1.34"
+kubernetes_version = "1.35"
 nodepools          = ["general-purpose", "system"]
 
 vpc = {
