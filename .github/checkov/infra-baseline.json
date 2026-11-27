@@ -1,0 +1,15 @@
+{
+  "failed_checks": [
+    {
+      "file": "infra/spoke/.terraform/modules/eks/main.tf",
+      "findings": [
+        {
+          "resource": "module.eks[0].kms",
+          "check_ids": [
+            "CKV_TF_1"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+name: Terraform CI - hub plan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/hub/**"
+      - "infra/modules/**"
+      - ".github/workflows/infra_*.yaml"
+      - ".github/workflows/infra_reusable_terraform_plan.yaml"
+      - ".github/checkov/**"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  plan_hub:
+    name: Plan hub
+    uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
+    with:
+      stack_dir: infra/hub
+      state_key: hub/terraform.tfstate
+      var_file: terraform.tfvars.example
+      artifact_name: tfplan-hub-${{ github.sha }}
+      uses_hub_state: false
+    secrets: inherit

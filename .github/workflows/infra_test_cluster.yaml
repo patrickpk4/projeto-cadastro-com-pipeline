@@ -1,208 +1,103 @@
-name: Test Cluster
+name: Smoke test EKS cluster
 
 on:
   workflow_call:
+    inputs:
+      cluster_name:
+        description: Name of the EKS cluster to test
+        required: true
+        type: string
     secrets:
       AWS_ROLE:
         required: true
-      BUCKET:
-        required: true
-      KEY:
-        required: true
-      TF_VARS:
-        required: true
-    
 
 jobs:
-  test_cluster_staging:
+  smoke_test:
+    name: Smoke test ${{ inputs.cluster_name }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
-      security-events: write
     steps:
-      - name: aws credentials
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE }}
-          aws-region: ${{ vars.REGION }}  
-          
-      - name: configura kubeconfig
+          aws-region: ${{ vars.REGION }}
+
+      - name: Configure kubeconfig
         env:
-          CLUSTER_NAME: ${{ vars.eks_stg }}
+          CLUSTER_NAME: ${{ inputs.cluster_name }}
           REGION: ${{ vars.REGION }}
         run: |
           aws eks update-kubeconfig \
-           --name "$CLUSTER_NAME" \
-           --region "$REGION"
-           
-      - name: Validar o cluster
+            --name "$CLUSTER_NAME" \
+            --region "$REGION"
+        
+        # Test cluster health, informaçoes sobre os nodes, pods e namespaces do cluster
+      - name: Check cluster health
         run: |
           kubectl cluster-info
           kubectl get nodes -o wide
           kubectl get pods -A
           kubectl get pods -n kube-system
 
-      - name: teste scheduler 
+        # Test scheduler, cria um deployment nginx e verifica se os pods estão prontos
+      - name: Test scheduler
         run: |
           kubectl create deployment nginx-deploy \
-          --image=nginx:alpine \
-          --replicas=2
+            --image=nginx:alpine \
+            --replicas=2
           kubectl wait \
-          --for=condition=Ready \
-          pod -l app=nginx-deploy \
-          --timeout=120s
-          kubectl get pod -l app=nginx-deploy -o wide  
-
-      - name: teste de dns 
+            --for=condition=Ready \
+            pod -l app=nginx-deploy \
+            --timeout=120s
+          kubectl get pod -l app=nginx-deploy -o wide
+        
+        # Test DNS resolution, cria um pod temporario e verifica se o DNS do cluster está funcionando
+      - name: Test cluster DNS
         run: |
           kubectl run dns-test \
-          --image=busybox:1.36 \
-          --restart=Never \
-          -- sleep 300    
-          kubectl exec dns-test -- nslookup kubernetes.default.svc.cluster.local        
-
-      - name: teste saida para internet 
-        run: |
-          kubectl run network-test \
-          --image=curlimages/curl \
-          --restart=Never \
-          --rm -it \
-          -- curl -I https://www.google.com
-
-      - name: checout
-        uses: actions/checkout@v4
-        with:
-          path: ./infra/testeEks
-
-      
-      - name: teste comunicação entre pods 
-        run: |
-          kubectl apply -f ./testeEks/nginx.yaml
-          kubectl rollout status deployment/nginx --timeout=60s
-          
-          kubectl run test-pod \
             --image=busybox:1.36 \
             --restart=Never \
             -- sleep 300
-          
-          # Espera o pod ficar Running antes de executar comandos nele
-          kubectl wait --for=condition=Ready pod/test-pod --timeout=60s
-          
-          kubectl exec test-pod -- wget -q --timeout=10 -O- http://nginx
-
-      - name: remover pods do cluster
-        run: |
-          kubectl delete pod dns-test test-pod 
-          kubectl delete deploy nginx-deploy 
-          kubectl delete deploy nginx
-     
-      - name: Mensagem final
-        run: |
-          echo "========================================"
-          echo " Testes finalizados"
-          echo "========================================"
-          echo "Branch:     ${{ github.ref_name }}"
-          echo "Commit:     ${{ github.sha }}"
-          echo "Autor:      ${{ github.actor }}"
-          echo "Repositório: ${{ github.repository }}"
-          echo "Run ID:     ${{ github.run_id }}"
-          echo "========================================"
-       
-          
-  test_cluster_prod:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-      security-events: write
-    steps:
-      - name: aws credentials
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE }}
-          aws-region: ${{ vars.REGION }}  
-          
-      - name: configura kubeconfig
-        env:
-          CLUSTER_NAME: ${{ vars.eks_prod }}
-          REGION: ${{ vars.REGION }}
-        run: |
-          aws eks update-kubeconfig \
-           --name "$CLUSTER_NAME" \
-           --region "$REGION"
-           
-      - name: Validar o cluster
-        run: |
-          kubectl cluster-info
-          kubectl get nodes -o wide
-          kubectl get pods -A
-          kubectl get pods -n kube-system
-
-      - name: teste scheduler 
-        run: |
-          kubectl create deployment nginx-deploy \
-          --image=nginx:alpine \
-          --replicas=2
-          kubectl wait \
-          --for=condition=Ready \
-          pod -l app=nginx-deploy \
-          --timeout=120s
-          kubectl get pod -l app=nginx-deploy -o wide  
-
-      - name: teste de dns 
-        run: |
-          kubectl run dns-test \
-          --image=busybox:1.36 \
-          --restart=Never \
-          -- sleep 300    
-          kubectl exec dns-test -- nslookup kubernetes.default.svc.cluster.local        
-
-      - name: teste saida para internet 
+          kubectl wait --for=condition=Ready pod/dns-test --timeout=60s
+          kubectl exec dns-test -- nslookup kubernetes.default.svc.cluster.local
+        
+        # Test internet egress, cria um pod temporario e verifica se ele consegue acessar a internet
+      - name: Test internet egress
         run: |
           kubectl run network-test \
-          --image=curlimages/curl \
-          --restart=Never \
-          --rm -it \
-          -- curl -I https://www.google.com
-
-      - name: checout
-        uses: actions/checkout@v4
-        with:
-          path: ./infra/testeEks
-
-      
-      - name: teste comunicação entre pods 
+            --image=curlimages/curl \
+            --restart=Never \
+            --rm -i \
+            -- curl -fsSI --max-time 30 https://www.google.com
+        # Test pod-to-pod communication, cria um pod nginx e um pod busybox e verifica se o busybox consegue acessar o nginx
+      - name: Test pod-to-pod communication
         run: |
           kubectl apply -f ./infra/testeEks/nginx.yaml
           kubectl rollout status deployment/nginx --timeout=60s
-          
+
           kubectl run test-pod \
             --image=busybox:1.36 \
             --restart=Never \
             -- sleep 300
-          
-          # Espera o pod ficar Running antes de executar comandos nele
           kubectl wait --for=condition=Ready pod/test-pod --timeout=60s
-          
           kubectl exec test-pod -- wget -q --timeout=10 -O- http://nginx
 
-      - name: remover pods do cluster
+      - name: Clean up smoke test resources
+        if: always()
         run: |
-          kubectl delete pod dns-test test-pod 
-          kubectl delete deploy nginx-deploy 
-          kubectl delete deploy nginx
-     
-      - name: Mensagem final
+          kubectl delete pod dns-test test-pod --ignore-not-found=true
+          kubectl delete deployment nginx-deploy nginx --ignore-not-found=true
+
+      - name: Report run details
+        if: always()
         run: |
-          echo "========================================"
-          echo " Testes finalizados"
-          echo "========================================"
-          echo "Branch:     ${{ github.ref_name }}"
-          echo "Commit:     ${{ github.sha }}"
-          echo "Autor:      ${{ github.actor }}"
-          echo "Repositório: ${{ github.repository }}"
-          echo "Run ID:     ${{ github.run_id }}"
-          echo "========================================"            
-          
-          
+          echo "Smoke test completed for cluster: ${{ inputs.cluster_name }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Run ID: ${{ github.run_id }}"

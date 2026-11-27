@@ -1,0 +1,163 @@
+name: Reusable Terraform plan by state
+
+on:
+  workflow_call:
+    inputs:
+      stack_dir:
+        description: Terraform root directory relative to the repository
+        required: true
+        type: string
+      state_key:
+        description: S3 state key for this stack
+        required: true
+        type: string
+      var_file:
+        description: Variables file relative to the Terraform root
+        required: true
+        type: string
+      artifact_name:
+        description: Plan artifact name
+        required: true
+        type: string
+      uses_hub_state:
+        description: Whether the root reads the hub state
+        required: true
+        type: boolean
+    secrets:
+      AWS_ROLE:
+        required: true
+      BUCKET:
+        required: true
+      TF_VERSION:
+        required: true
+    outputs:
+      has_changes:
+        description: Whether the plan contains changes
+        value: ${{ jobs.plan.outputs.has_changes }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      has_changes: ${{ steps.plan.outputs.has_changes || 'false' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ secrets.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ vars.REGION }}
+
+        # verifica se o estado do hub existe e se contém 
+        # todos os outputs necessários para o plano do spoke, 
+        # caso contrário, o plano do spoke será ignorado.
+      - name: Check hub state outputs
+        id: hub_state
+        if: inputs.uses_hub_state
+        env:
+          BUCKET: ${{ secrets.BUCKET }}
+        shell: bash
+        run: |
+          error_file="$RUNNER_TEMP/hub-state-error.txt"
+          state_file="$RUNNER_TEMP/hub-state.json"
+
+          if aws s3api head-object \
+            --bucket "$BUCKET" \
+            --key "hub/terraform.tfstate" >/dev/null 2>"$error_file"; then
+            aws s3api get-object \
+              --bucket "$BUCKET" \
+              --key "hub/terraform.tfstate" \
+              "$state_file" >/dev/null
+            if jq -e '
+              .outputs.transit_gateway_id.value != null and
+              .outputs.hub_attachment_id.value != null and
+              .outputs.hub_route_table_id.value != null and
+              .outputs.hub_public_route_table_id.value != null and
+              .outputs.hub_load_balancer_security_group_id.value != null and
+              .outputs.hub_load_balancer_dns_name.value != null
+            ' "$state_file" >/dev/null; then
+              echo "ready=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              echo "Spoke plan skipped: the hub state does not contain all required outputs." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            result=$?
+            if grep -Eq '404|NoSuchKey|Not Found' "$error_file"; then
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              echo "Spoke plan skipped: apply the hub before planning a spoke." >> "$GITHUB_STEP_SUMMARY"
+            else
+              cat "$error_file" >&2
+              exit "$result"
+            fi
+          fi
+
+      - name: Initialize state backend
+        working-directory: ${{ inputs.stack_dir }}
+        env:
+          BUCKET: ${{ secrets.BUCKET }}
+          STATE_KEY: ${{ inputs.state_key }}
+          REGION: ${{ vars.REGION }}
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=$BUCKET" \
+            -backend-config="key=$STATE_KEY" \
+            -backend-config="region=$REGION"
+
+      - name: Create Terraform plan
+        id: plan
+        if: inputs.uses_hub_state == false || steps.hub_state.outputs.ready == 'true'
+        working-directory: ${{ inputs.stack_dir }}
+        env:
+          BUCKET: ${{ secrets.BUCKET }}
+          USES_HUB_STATE: ${{ inputs.uses_hub_state }}
+          VAR_FILE: ${{ inputs.var_file }}
+        shell: bash
+        run: |
+          if [[ "$USES_HUB_STATE" == "true" ]]; then
+            export TF_VAR_state_bucket="$BUCKET"
+          fi
+
+          set +e
+          terraform plan -detailed-exitcode \
+            -var-file="$VAR_FILE" \
+            -out=tfplan
+          result=$?
+          set -e
+
+          case "$result" in
+            0)
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+              echo "Nao ha mudancas."
+              ;;
+            2)
+              echo "has_changes=true" >> "$GITHUB_OUTPUT"
+              terraform show -no-color tfplan > plan.txt
+              cat plan.txt >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              exit "$result"
+              ;;
+          esac
+
+      - name: Upload saved plan
+        if: steps.plan.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: |
+            ${{ inputs.stack_dir }}/tfplan
+            ${{ inputs.stack_dir }}/plan.txt
+          retention-days: 2

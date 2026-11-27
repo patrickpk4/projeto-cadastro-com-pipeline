@@ -1,0 +1,78 @@
+name: Reusable Terraform apply by state
+
+on:
+  workflow_call:
+    inputs:
+      stack_dir:
+        description: Terraform root directory relative to the repository
+        required: true
+        type: string
+      state_key:
+        description: S3 state key for this stack
+        required: true
+        type: string
+      artifact_name:
+        description: Plan artifact name
+        required: true
+        type: string
+      environment:
+        description: GitHub Environment protecting this deployment
+        required: true
+        type: string
+    secrets:
+      AWS_ROLE:
+        required: true
+      BUCKET:
+        required: true
+      TF_VERSION:
+        required: true
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+    concurrency:
+      group: terraform-${{ inputs.state_key }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ secrets.TF_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ vars.REGION }}
+
+      - name: Initialize state backend
+        working-directory: ${{ inputs.stack_dir }}
+        env:
+          BUCKET: ${{ secrets.BUCKET }}
+          STATE_KEY: ${{ inputs.state_key }}
+          REGION: ${{ vars.REGION }}
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=$BUCKET" \
+            -backend-config="key=$STATE_KEY" \
+            -backend-config="region=$REGION"
+
+      - name: Download saved plan
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ inputs.stack_dir }}
+
+      - name: Apply saved plan
+        working-directory: ${{ inputs.stack_dir }}
+        run: terraform apply -auto-approve tfplan

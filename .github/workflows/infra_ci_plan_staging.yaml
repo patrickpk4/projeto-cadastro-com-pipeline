@@ -1,0 +1,29 @@
+name: Terraform CI - staging plan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/hub/**"
+      - "infra/spoke/**"
+      - "infra/modules/**"
+      - "infra/envs/staging.tfvars.example"
+      - ".github/workflows/infra_*.yaml"
+      - ".github/workflows/infra_reusable_terraform_plan.yaml"
+      - ".github/checkov/**"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  plan_staging:
+    name: Plan staging
+    uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
+    with:
+      stack_dir: infra/spoke
+      state_key: spoke/staging/terraform.tfstate
+      var_file: ../envs/staging.tfvars.example
+      artifact_name: tfplan-staging-${{ github.sha }}
+      uses_hub_state: true
+    secrets: inherit

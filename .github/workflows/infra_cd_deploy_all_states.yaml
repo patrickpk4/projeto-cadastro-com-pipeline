@@ -1,0 +1,127 @@
+name: Terraform CD - hub to staging to production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/hub/**"
+      - "infra/spoke/**"
+      - "infra/modules/**"
+      - "infra/envs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-infra-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan_hub:
+    name: Plan hub
+    uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
+    with:
+      stack_dir: infra/hub
+      state_key: hub/terraform.tfstate
+      var_file: terraform.tfvars.example
+      artifact_name: tfplan-hub-${{ github.sha }}
+      uses_hub_state: false
+    secrets: inherit
+
+  apply_hub:
+    name: Apply hub
+    needs: plan_hub
+    if: github.ref == 'refs/heads/main' && needs.plan_hub.outputs.has_changes == 'true'
+    uses: ./.github/workflows/infra_reusable_terraform_apply.yaml
+    with:
+      stack_dir: infra/hub
+      state_key: hub/terraform.tfstate
+      artifact_name: tfplan-hub-${{ github.sha }}
+      environment: hub
+    secrets: inherit
+
+  plan_staging:
+    name: Plan staging
+    needs: [plan_hub, apply_hub]
+    if: >-
+      always() &&
+      needs.plan_hub.result == 'success' &&
+      (needs.apply_hub.result == 'success' || needs.apply_hub.result == 'skipped')
+    uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
+    with:
+      stack_dir: infra/spoke
+      state_key: spoke/staging/terraform.tfstate
+      var_file: ../envs/staging.tfvars.example
+      artifact_name: tfplan-staging-${{ github.sha }}
+      uses_hub_state: true
+    secrets: inherit
+
+  apply_staging:
+    name: Apply staging
+    needs: plan_staging
+    if: github.ref == 'refs/heads/main' && needs.plan_staging.outputs.has_changes == 'true'
+    uses: ./.github/workflows/infra_reusable_terraform_apply.yaml
+    with:
+      stack_dir: infra/spoke
+      state_key: spoke/staging/terraform.tfstate
+      artifact_name: tfplan-staging-${{ github.sha }}
+      environment: staging
+    secrets: inherit
+
+  smoke_test_staging:
+    name: Smoke test staging
+    needs: [plan_staging, apply_staging]
+    if: >-
+      always() &&
+      needs.plan_staging.result == 'success' &&
+      (needs.apply_staging.result == 'success' || needs.apply_staging.result == 'skipped')
+    uses: ./.github/workflows/infra_test_cluster.yaml
+    with:
+      cluster_name: ${{ vars.eks_stg }}
+    secrets: inherit
+
+  plan_production:
+    name: Plan production
+    needs: [plan_staging, apply_staging, smoke_test_staging]
+    if: >-
+      always() &&
+      needs.plan_staging.result == 'success' &&
+      (needs.apply_staging.result == 'success' || needs.apply_staging.result == 'skipped') &&
+      needs.smoke_test_staging.result == 'success'
+    uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
+    with:
+      stack_dir: infra/spoke
+      state_key: spoke/production/terraform.tfstate
+      var_file: ../envs/production.tfvars.example
+      artifact_name: tfplan-production-${{ github.sha }}
+      uses_hub_state: true
+    secrets: inherit
+
+  apply_production:
+    name: Apply production
+    needs: plan_production
+    if: github.ref == 'refs/heads/main' && needs.plan_production.outputs.has_changes == 'true'
+    uses: ./.github/workflows/infra_reusable_terraform_apply.yaml
+    with:
+      stack_dir: infra/spoke
+      state_key: spoke/production/terraform.tfstate
+      artifact_name: tfplan-production-${{ github.sha }}
+      environment: production
+    secrets: inherit
+
+  smoke_test_production:
+    name: Smoke test production
+    needs:
+      - plan_production
+      - apply_production
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.plan_production.result == 'success' &&
+      (needs.apply_production.result == 'success' || needs.apply_production.result == 'skipped')
+    uses: ./.github/workflows/infra_test_cluster.yaml
+    with:
+      cluster_name: ${{ vars.eks_prod }}
+    secrets: inherit

@@ -1,0 +1,130 @@
+name: Terraform static checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - "feature/**"
+      - "hotfix/**"
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra_*.yaml"
+      - ".github/workflows/infra_reusable_terraform_plan.yaml"
+      - ".github/checkov/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-static-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    name: Validate ${{ matrix.stack }} root
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+      # A matrix atual usa stack: [hub, spoke] porque ela 
+      # representa roots Terraform, isto é, diretórios com 
+      # configurações distintas: infra/hub e infra/spoke. 
+      # Não representa cada state. 
+      # Staging e production usam o mesmo código em 
+      # infra/spoke; por isso não é necessário validar 
+      # nem executar TFLint duas vezes para esse root.
+        stack: [hub, spoke]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ secrets.TF_VERSION }}
+
+      - name: Initialize without a backend
+        working-directory: infra/${{ matrix.stack }}
+        run: terraform init -backend=false
+
+      - name: Validate Terraform
+        working-directory: infra/${{ matrix.stack }}
+        run: terraform validate
+
+  terraform_fmt:
+    name: Check Terraform formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ secrets.TF_VERSION }}
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive infra
+  # TFLint é um linter para Terraform. 
+  # Ele verifica se há problemas de sintaxe, 
+  # práticas recomendadas e possíveis erros de configuração.
+  tflint:
+    name: TFLint ${{ matrix.directory }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        directory:
+          - infra/hub
+          - infra/spoke
+          - infra/modules/network
+          - infra/modules/transit-gateway
+          - infra/modules/vpc
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: v0.66.0
+
+      - name: Lint Terraform
+        run: tflint --chdir="${{ matrix.directory }}" --format=compact
+
+  checkov:
+    name: Checkov
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+        # Checkov é uma ferramenta de análise de segurança para infraestrutura como código (IaC).
+        # Ele verifica arquivos de configuração de infraestrutura, como Terraform, CloudFormation e Kubernetes,
+        # em busca de vulnerabilidades, más práticas e violações de políticas de segurança.
+        # usa baseline para ignorar falsos positivos conhecidos e reduzir alertas desnecessários.
+        # referenciados nos arquivos de configuração, garantindo uma análise completa.
+        # arquivo com os resultados da análise em formato SARIF, que é um padrão para relatar 
+        # problemas de segurança e qualidade de código.
+        
+      - name: Scan infrastructure
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: ./infra
+          download_external_modules: true
+          baseline: ./.github/checkov/infra-baseline.json
+          skip_check: CKV_AWS_20,CKV_AWS_21
+          soft_fail: false
+          output_format: sarif
+          output_file_path: results.sarif
+
+      - name: Upload SARIF results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif
+          token: ${{ secrets.GITHUB_TOKEN }}
