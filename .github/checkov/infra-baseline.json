@@ -98,6 +98,12 @@
           ]
         },
         {
+          "resource": "module.network[0].aws_lb_target_group.environment",
+          "check_ids": [
+            "CKV_AWS_378"
+          ]
+        },
+        {
           "resource": "module.network[0].aws_security_group.hub_load_balancer",
           "check_ids": [
             "CKV_AWS_260"
