@@ -37,11 +37,12 @@ resource "aws_security_group" "hub_load_balancer" {
 }
 
 resource "aws_lb" "hub" {
-  name               = "hub-public"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.hub_load_balancer.id]
-  subnets            = var.public_subnet_ids
+  name                       = "hub-public"
+  internal                   = false
+  load_balancer_type         = "application"
+  drop_invalid_header_fields = true
+  security_groups            = [aws_security_group.hub_load_balancer.id]
+  subnets                    = var.public_subnet_ids
 
   tags = {
     Name      = "hub-public"

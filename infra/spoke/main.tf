@@ -27,6 +27,9 @@ module "eks" {
 
   endpoint_public_access  = true
   endpoint_private_access = true
+  encryption_config = {
+    resources = ["secrets"]
+  }
 
   enable_cluster_creator_admin_permissions = true
 
