@@ -157,6 +157,8 @@ jobs:
   # utiliza variaveis de ambiente para configurar o comportamento da ação,
   # incluindo o token do GitHub, a licença do Gitleaks 
   # e a desativação de comentários automáticos em pull requests.
+  # usando fetch-depth: 0 para garantir que todo o histórico do repositório seja verificado,
+  # aumentando a probabilidade de detectar segredos que possam ter sido expostos em commits antigos
   gitleaks:
     name: Scan repository history for secrets
     runs-on: ubuntu-latest
