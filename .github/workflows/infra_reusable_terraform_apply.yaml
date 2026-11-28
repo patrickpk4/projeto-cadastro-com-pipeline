@@ -16,8 +16,8 @@ on:
         required: true
         type: string
       environment:
-        description: GitHub Environment protecting this deployment
-        required: true
+        description: Optional GitHub Environment protecting this deployment
+        required: false
         type: string
     secrets:
       AWS_ROLE:
@@ -30,8 +30,7 @@ on:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    environment:
-      name: ${{ inputs.environment }}
+    environment: ${{ inputs.environment || null }}
     concurrency:
       group: terraform-${{ inputs.state_key }}
       cancel-in-progress: false

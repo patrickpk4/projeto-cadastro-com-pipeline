@@ -11,9 +11,9 @@ on:
         description: S3 state key for this stack
         required: true
         type: string
-      var_file:
-        description: Variables file relative to the Terraform root
-        required: true
+      environment:
+        description: Optional GitHub Environment that provides stack variables
+        required: false
         type: string
       artifact_name:
         description: Plan artifact name
@@ -30,6 +30,8 @@ on:
         required: true
       TF_VERSION:
         required: true
+      TF_VARS:
+        required: false
     outputs:
       has_changes:
         description: Whether the plan contains changes
@@ -38,6 +40,7 @@ on:
 jobs:
   plan:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || null }}
     permissions:
       contents: read
       id-token: write
@@ -122,17 +125,27 @@ jobs:
         working-directory: ${{ inputs.stack_dir }}
         env:
           BUCKET: ${{ secrets.BUCKET }}
+          TF_VARS: ${{ secrets.TF_VARS }}
           USES_HUB_STATE: ${{ inputs.uses_hub_state }}
-          VAR_FILE: ${{ inputs.var_file }}
+          SECRET_SCOPE: ${{ inputs.environment || 'repository' }}
         shell: bash
         run: |
+          if [[ -z "$TF_VARS" ]]; then
+            echo "::error::TF_VARS is not configured for the $SECRET_SCOPE secret scope"
+            exit 1
+          fi
+
+          vars_file="terraform.tfvars"
+          trap 'rm -f -- "$vars_file"' EXIT
+          umask 077
+          printf '%s' "$TF_VARS" > "$vars_file"
+
           if [[ "$USES_HUB_STATE" == "true" ]]; then
             export TF_VAR_state_bucket="$BUCKET"
           fi
 
           set +e
           terraform plan -detailed-exitcode \
-            -var-file="$VAR_FILE" \
             -out=tfplan
           result=$?
           set -e

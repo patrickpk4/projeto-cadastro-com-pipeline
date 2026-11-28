@@ -25,7 +25,6 @@ jobs:
     with:
       stack_dir: infra/hub
       state_key: hub/terraform.tfstate
-      var_file: terraform.tfvars.example
       artifact_name: tfplan-hub-${{ github.sha }}
       uses_hub_state: false
     secrets: inherit
@@ -39,7 +38,6 @@ jobs:
       stack_dir: infra/hub
       state_key: hub/terraform.tfstate
       artifact_name: tfplan-hub-${{ github.sha }}
-      environment: hub
     secrets: inherit
 
   plan_staging:
@@ -53,7 +51,7 @@ jobs:
     with:
       stack_dir: infra/spoke
       state_key: spoke/staging/terraform.tfstate
-      var_file: ../envs/staging.tfvars.example
+      environment: staging
       artifact_name: tfplan-staging-${{ github.sha }}
       uses_hub_state: true
     secrets: inherit
@@ -94,7 +92,7 @@ jobs:
     with:
       stack_dir: infra/spoke
       state_key: spoke/production/terraform.tfstate
-      var_file: ../envs/production.tfvars.example
+      environment: production
       artifact_name: tfplan-production-${{ github.sha }}
       uses_hub_state: true
     secrets: inherit

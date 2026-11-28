@@ -23,7 +23,7 @@ jobs:
     with:
       stack_dir: infra/spoke
       state_key: spoke/staging/terraform.tfstate
-      var_file: ../envs/staging.tfvars.example
+      environment: staging
       artifact_name: tfplan-staging-${{ github.sha }}
       uses_hub_state: true
     secrets: inherit
