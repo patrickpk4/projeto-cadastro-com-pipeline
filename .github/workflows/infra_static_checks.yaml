@@ -94,13 +94,19 @@ jobs:
         run: tflint --chdir="${{ matrix.directory }}" --format=compact
 
   checkov:
-    name: Checkov (${{ matrix.environment }})
+    name: Checkov (${{ matrix.secret_scope }})
     runs-on: ubuntu-latest
-    environment: ${{ matrix.environment }}
+    environment: ${{ matrix.environment || null }}
     strategy:
       fail-fast: false
       matrix:
-        environment: [staging, production]
+        include:
+          - secret_scope: hub
+            environment: ""
+          - secret_scope: staging
+            environment: staging
+          - secret_scope: production
+            environment: production
     permissions:
       contents: read
       security-events: write
@@ -113,7 +119,7 @@ jobs:
           TF_VARS: ${{ secrets.TF_VARS }}
         run: |
           if [ -z "$TF_VARS" ]; then
-            echo "::error::TF_VARS is not configured in the ${{ matrix.environment }} Environment"
+            echo "::error::TF_VARS is not configured for the ${{ matrix.secret_scope }} secret scope"
             exit 1
           fi
           umask 077
@@ -148,7 +154,7 @@ jobs:
         with:
           sarif_file: results.sarif
           token: ${{ secrets.GITHUB_TOKEN }}
-          category: checkov-${{ matrix.environment }}
+          category: checkov-${{ matrix.secret_scope }}
   
   # scaneia o repositório em busca de segredos expostos, 
   # como senhas, tokens de API e chaves privadas.
