@@ -59,6 +59,8 @@ Os plans usam `TF_VARS` no escopo configurado para cada stack: o hub usa os secr
 
 Configure também os secrets `AWS_ROLE`, `BUCKET` e `TF_VERSION`, além da variável `REGION`, nos escopos adequados aos workflows. As permissões/reviewers definidos nos GitHub Environments também se aplicam aos jobs de plan que leem `TF_VARS`; assim, um Environment com aprovação obrigatória pode pausar o plan do PR ou do CD antes da execução. Os smoke tests usam as variáveis `eks_stg` e `eks_prod` com os nomes dos clusters. As chaves de state são fixas; o secret `KEY` não é consumido por estes workflows.
 
+O secret `BUCKET` deve conter somente o nome do bucket S3, sem espaços ou quebras de linha. Os workflows removem espaços externos e falham se o valor ficar vazio, mas mantenha o secret limpo nas configurações do GitHub.
+
 Os jobs de staging e production selecionam os GitHub Environments `staging` e `production`; configure reviewers principalmente em `production`. O hub não seleciona um Environment: ele usa secrets de repositório e não recebe aprovação de Environment. Configure a trust policy OIDC das roles para permitir os subjects correspondentes: `repo:patrickpk4/projeto-cadastro-com-pipeline:environment:staging` e `...:environment:production` para os spokes; para o hub, permita os subjects padrão do repositório/ref e de pull request usados pelos plans e applies sem Environment.
 
 Os plans de staging/production em pull requests são pulados com uma mensagem clara se o state do hub ainda não tiver os outputs necessários; aplique o hub primeiro. A versão do Terraform vem do secret `TF_VERSION`, os providers estão travados nos lockfiles e o módulo EKS está fixado por commit SHA. O versionamento histórico dos states depende do versionamento habilitado no bucket S3.

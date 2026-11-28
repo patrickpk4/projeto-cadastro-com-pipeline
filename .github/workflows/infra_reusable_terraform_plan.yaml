@@ -52,6 +52,26 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
+      - name: Normalize S3 bucket secret
+        env:
+          BUCKET_SECRET: ${{ secrets.BUCKET }}
+        shell: bash
+        run: |
+          bucket="$(printf '%s' "$BUCKET_SECRET" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [[ -z "$bucket" ]]; then
+            echo "::error::The BUCKET secret is empty after trimming whitespace"
+            exit 1
+          fi
+          if [[ "$bucket" =~ [[:space:]] ]]; then
+            echo "::error::The BUCKET secret contains internal whitespace"
+            exit 1
+          fi
+          if [[ "$bucket" != "$BUCKET_SECRET" ]]; then
+            echo "::warning::The BUCKET secret has surrounding whitespace; trimming it for this run"
+          fi
+          echo "::add-mask::$bucket"
+          printf 'BUCKET=%s\n' "$bucket" >> "$GITHUB_ENV"
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v4
         with:
@@ -69,8 +89,6 @@ jobs:
       - name: Check hub state outputs
         id: hub_state
         if: inputs.uses_hub_state
-        env:
-          BUCKET: ${{ secrets.BUCKET }}
         shell: bash
         run: |
           error_file="$RUNNER_TEMP/hub-state-error.txt"
@@ -110,7 +128,6 @@ jobs:
       - name: Initialize state backend
         working-directory: ${{ inputs.stack_dir }}
         env:
-          BUCKET: ${{ secrets.BUCKET }}
           STATE_KEY: ${{ inputs.state_key }}
           REGION: ${{ vars.REGION }}
         run: |
@@ -124,7 +141,6 @@ jobs:
         if: inputs.uses_hub_state == false || steps.hub_state.outputs.ready == 'true'
         working-directory: ${{ inputs.stack_dir }}
         env:
-          BUCKET: ${{ secrets.BUCKET }}
           TF_VARS: ${{ secrets.TF_VARS }}
           USES_HUB_STATE: ${{ inputs.uses_hub_state }}
           SECRET_SCOPE: ${{ inputs.environment || 'repository' }}
