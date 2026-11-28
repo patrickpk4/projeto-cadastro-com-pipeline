@@ -16,8 +16,8 @@ on:
         required: true
         type: string
       environment:
-        description: GitHub Environment protecting this deployment
-        required: true
+        description: Optional GitHub Environment protecting this deployment
+        required: false
         type: string
     secrets:
       AWS_ROLE:
@@ -30,8 +30,7 @@ on:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    environment:
-      name: ${{ inputs.environment }}
+    environment: ${{ inputs.environment || null }}
     concurrency:
       group: terraform-${{ inputs.state_key }}
       cancel-in-progress: false
@@ -43,6 +42,26 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+
+      - name: Normalize S3 bucket secret
+        env:
+          BUCKET_SECRET: ${{ secrets.BUCKET }}
+        shell: bash
+        run: |
+          bucket="$(printf '%s' "$BUCKET_SECRET" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [[ -z "$bucket" ]]; then
+            echo "::error::The BUCKET secret is empty after trimming whitespace"
+            exit 1
+          fi
+          if [[ "$bucket" =~ [[:space:]] ]]; then
+            echo "::error::The BUCKET secret contains internal whitespace"
+            exit 1
+          fi
+          if [[ "$bucket" != "$BUCKET_SECRET" ]]; then
+            echo "::warning::The BUCKET secret has surrounding whitespace; trimming it for this run"
+          fi
+          echo "::add-mask::$bucket"
+          printf 'BUCKET=%s\n' "$bucket" >> "$GITHUB_ENV"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v4
@@ -58,7 +77,6 @@ jobs:
       - name: Initialize state backend
         working-directory: ${{ inputs.stack_dir }}
         env:
-          BUCKET: ${{ secrets.BUCKET }}
           STATE_KEY: ${{ inputs.state_key }}
           REGION: ${{ vars.REGION }}
         run: |

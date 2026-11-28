@@ -23,7 +23,7 @@ jobs:
     with:
       stack_dir: infra/spoke
       state_key: spoke/production/terraform.tfstate
-      var_file: ../envs/production.tfvars.example
+      environment: production
       artifact_name: tfplan-production-${{ github.sha }}
       uses_hub_state: true
     secrets: inherit
