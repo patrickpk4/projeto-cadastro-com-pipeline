@@ -1,5 +1,7 @@
 name: Smoke test EKS cluster
 
+# Testes reutilizáveis pós-implantação para um cluster EKS existente. O workflow
+# chamador informa o nome do cluster; seu Environment fornece AWS_ROLE e REGION.
 on:
   workflow_call:
     inputs:
@@ -8,6 +10,7 @@ on:
         required: true
         type: string
     secrets:
+      # A role precisa permitir consultar o EKS e executar as operações Kubernetes dos testes.
       AWS_ROLE:
         required: true
 
@@ -16,6 +19,7 @@ jobs:
     name: Smoke test ${{ inputs.cluster_name }}
     runs-on: ubuntu-latest
     permissions:
+      # Usa OIDC em vez de credenciais AWS de longa duração.
       id-token: write
       contents: read
     steps:
@@ -37,7 +41,7 @@ jobs:
             --name "$CLUSTER_NAME" \
             --region "$REGION"
         
-        # Test cluster health, informaçoes sobre os nodes, pods e namespaces do cluster
+        # Confere a disponibilidade da API, os nodes e os workloads essenciais do cluster.
       - name: Check cluster health
         run: |
           kubectl cluster-info
@@ -45,7 +49,7 @@ jobs:
           kubectl get pods -A
           kubectl get pods -n kube-system
 
-        # Test scheduler, cria um deployment nginx e verifica se os pods estão prontos
+        # Verifica se o scheduler consegue iniciar réplicas de um workload.
       - name: Test scheduler
         run: |
           kubectl create deployment nginx-deploy \
@@ -57,7 +61,8 @@ jobs:
             --timeout=120s
           kubectl get pod -l app=nginx-deploy -o wide
         
-        # Test DNS resolution, cria um pod temporario e verifica se o DNS do cluster está funcionando
+        # Executa a consulta DNS no próprio pod e aguarda seu término com sucesso.
+        # Evita depender da conexão de streaming kubectl exec entre API server e kubelet.
       - name: Test cluster DNS
         run: |
           kubectl run dns-test \
@@ -72,7 +77,7 @@ jobs:
             exit 1
           fi
         
-        # Test internet egress, cria um pod temporario e verifica se ele consegue acessar a internet
+        # Valida o acesso HTTPS externo a partir de um workload do cluster.
       - name: Test internet egress
         run: |
           kubectl run network-test \
@@ -86,7 +91,8 @@ jobs:
             kubectl describe pod network-test
             exit 1
           fi
-        # Test pod-to-pod communication, cria um pod nginx e um pod busybox e verifica se o busybox consegue acessar o nginx
+        # Usa namespace dedicado e a NetworkPolicy do manifesto de smoke test.
+        # O pod cliente faz a requisição e deve terminar com estado Succeeded.
       - name: Test pod-to-pod communication
         run: |
           kubectl apply -f ./infra/testeEks/nginx.yaml
@@ -108,6 +114,7 @@ jobs:
           fi
 
       - name: Clean up smoke test resources
+        # Remove os workloads temporários mesmo quando alguma etapa anterior falhar.
         if: always()
         run: |
           kubectl delete pod dns-test network-test test-pod --ignore-not-found=true
@@ -115,6 +122,7 @@ jobs:
           kubectl delete namespace infra-smoke-tests --ignore-not-found=true
 
       - name: Report run details
+        # Registra metadados da execução para diagnóstico e rastreabilidade.
         if: always()
         run: |
           echo "Smoke test completed for cluster: ${{ inputs.cluster_name }}"

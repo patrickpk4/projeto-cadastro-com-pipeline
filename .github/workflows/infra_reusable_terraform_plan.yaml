@@ -1,5 +1,8 @@
 name: Reusable Terraform plan by state
 
+# Implementação compartilhada de planejamento, sem apply, para hub, staging e
+# production. Valida os outputs do hub necessários às spokes, salva o plano e
+# informa se há mudanças para que os workflows chamadores controlem os applies.
 on:
   workflow_call:
     inputs:
@@ -12,7 +15,7 @@ on:
         required: true
         type: string
       environment:
-        description: Optional GitHub Environment that provides stack variables
+        description: Environment do GitHub com secrets específicos; omitido para hub
         required: false
         type: string
       artifact_name:
@@ -20,10 +23,11 @@ on:
         required: true
         type: string
       uses_hub_state:
-        description: Whether the root reads the hub state
+        description: Indica se o plano da spoke depende de outputs do state do hub
         required: true
         type: boolean
     secrets:
+      # AWS_ROLE e BUCKET devem estar disponíveis no repositório ou no Environment selecionado.
       AWS_ROLE:
         required: true
       BUCKET:
@@ -40,6 +44,8 @@ on:
 jobs:
   plan:
     runs-on: ubuntu-latest
+    # Sem Environment, o hub usa secrets do repositório. Staging e production
+    # selecionam seus respectivos Environments e secrets específicos.
     environment: ${{ inputs.environment || null }}
     permissions:
       contents: read
@@ -53,6 +59,7 @@ jobs:
           ref: ${{ github.sha }}
 
       - name: Normalize S3 bucket secret
+        # Remove espaços acidentais no início/fim e rejeita entradas inválidas.
         env:
           BUCKET_SECRET: ${{ secrets.BUCKET }}
         shell: bash
@@ -73,6 +80,7 @@ jobs:
           printf 'BUCKET=%s\n' "$bucket" >> "$GITHUB_ENV"
 
       - name: Set up Terraform
+        # Desativa o wrapper para preservar os códigos detalhados do Terraform (0 e 2).
         uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ secrets.TF_VERSION }}
@@ -84,9 +92,8 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ vars.REGION }}
 
-        # verifica se o estado do hub existe e se contém 
-        # todos os outputs necessários para o plano do spoke, 
-        # caso contrário, o plano do spoke será ignorado.
+        # O plano da spoke depende dos outputs aplicados pelo hub. Só ignora a etapa
+        # quando o state não existe ou está incompleto; erros de acesso/serviço falham.
       - name: Check hub state outputs
         id: hub_state
         if: inputs.uses_hub_state
@@ -127,6 +134,7 @@ jobs:
           fi
 
       - name: Initialize state backend
+        # Reconfigura o backend para a chave de state independente desta stack.
         working-directory: ${{ inputs.stack_dir }}
         env:
           STATE_KEY: ${{ inputs.state_key }}
@@ -139,6 +147,8 @@ jobs:
 
       - name: Create Terraform plan
         id: plan
+        # O Terraform carrega automaticamente o arquivo terraform.tfvars gerado.
+        # O trap remove o arquivo derivado do secret, com sucesso ou falha do plano.
         if: inputs.uses_hub_state == false || steps.hub_state.outputs.ready == 'true'
         working-directory: ${{ inputs.stack_dir }}
         env:
@@ -169,10 +179,12 @@ jobs:
 
           case "$result" in
             0)
+              # Código detalhado 0 indica que o state já corresponde à configuração.
               echo "has_changes=false" >> "$GITHUB_OUTPUT"
               echo "Nao ha mudancas."
               ;;
             2)
+              # Código detalhado 2 indica mudanças; preserve e publique este plano.
               echo "has_changes=true" >> "$GITHUB_OUTPUT"
               terraform show -no-color tfplan > plan.txt
               cat plan.txt >> "$GITHUB_STEP_SUMMARY"
@@ -183,6 +195,8 @@ jobs:
           esac
 
       - name: Upload saved plan
+        # Só publica planos com mudanças. O apply baixa este artefato específico do
+        # commit; a retenção é curta porque o plano pode conter dados da infraestrutura.
         if: steps.plan.outputs.has_changes == 'true'
         uses: actions/upload-artifact@v4
         with:

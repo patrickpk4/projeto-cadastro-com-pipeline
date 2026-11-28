@@ -1,5 +1,8 @@
 name: Reusable Terraform apply by state
 
+# Aplica somente um plano salvo anteriormente na mesma execução de implantação.
+# O Environment selecionado pode exigir aprovação e fornece credenciais AWS para
+# staging ou production; sem Environment, o hub usa os secrets do repositório.
 on:
   workflow_call:
     inputs:
@@ -16,7 +19,7 @@ on:
         required: true
         type: string
       environment:
-        description: Optional GitHub Environment protecting this deployment
+        description: Environment opcional que fornece secrets e proteções de implantação
         required: false
         type: string
     secrets:
@@ -31,6 +34,7 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment || null }}
+    # Serializa alterações para impedir gravações simultâneas em cada state S3.
     concurrency:
       group: terraform-${{ inputs.state_key }}
       cancel-in-progress: false
@@ -44,6 +48,7 @@ jobs:
           ref: ${{ github.sha }}
 
       - name: Normalize S3 bucket secret
+        # Valida o nome do bucket antes de acessar o S3.
         env:
           BUCKET_SECRET: ${{ secrets.BUCKET }}
         shell: bash
@@ -69,12 +74,14 @@ jobs:
           terraform_version: ${{ secrets.TF_VERSION }}
 
       - name: Configure AWS credentials
+        # Assume por OIDC a role do repositório ou do GitHub Environment selecionado.
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE }}
           aws-region: ${{ vars.REGION }}
 
       - name: Initialize state backend
+        # Inicializa exatamente o state usado pelo workflow chamador para gerar o plano.
         working-directory: ${{ inputs.stack_dir }}
         env:
           STATE_KEY: ${{ inputs.state_key }}
@@ -86,11 +93,13 @@ jobs:
             -backend-config="region=$REGION"
 
       - name: Download saved plan
+        # Baixa o artefato associado ao commit; não recalcula o plano nesta etapa.
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.artifact_name }}
           path: ${{ inputs.stack_dir }}
 
       - name: Apply saved plan
+        # Aplica o plano binário salvo e publicado pelo job de planejamento.
         working-directory: ${{ inputs.stack_dir }}
         run: terraform apply -auto-approve tfplan
