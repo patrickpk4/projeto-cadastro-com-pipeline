@@ -1,5 +1,8 @@
 name: Terraform CI - staging plan
 
+# Gera um plano de staging, sem aplicar mudanças, nos pull requests relevantes.
+# Staging e production têm workflows separados para permitir revisar cada
+# configuração e resultado de forma independente.
 on:
   pull_request:
     branches: [main]
@@ -13,17 +16,25 @@ on:
       - ".github/checkov/**"
 
 permissions:
+  # Permite ler o código e solicitar credenciais AWS via OIDC para consultar o state.
   contents: read
   id-token: write
 
 jobs:
   plan_staging:
     name: Plan staging
+    # O planejador reutilizável seleciona o Environment staging para obter os secrets
+    # TF_VARS, AWS_ROLE e BUCKET desse ambiente.
     uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
     with:
+      # Staging e production compartilham o root spoke, mas usam states separados.
       stack_dir: infra/spoke
       state_key: spoke/staging/terraform.tfstate
+      # O Environment fornece secrets específicos e pode exigir aprovação.
       environment: staging
+      # O artefato identifica o commit do PR e só é enviado quando há mudanças.
       artifact_name: tfplan-staging-${{ github.sha }}
+      # O plano da spoke depende dos outputs atualmente aplicados pelo hub.
       uses_hub_state: true
+    # Encaminha os secrets do repositório e do Environment ao workflow reutilizável.
     secrets: inherit

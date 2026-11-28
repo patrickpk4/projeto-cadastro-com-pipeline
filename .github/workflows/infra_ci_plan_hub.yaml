@@ -1,5 +1,8 @@
 name: Terraform CI - hub plan
 
+# Gera um plano Terraform somente de leitura para o hub de rede em pull requests
+# relevantes. O hub usa os secrets AWS_ROLE, BUCKET e TF_VARS do repositório, sem
+# selecionar um GitHub Environment. Este workflow nunca aplica mudanças.
 on:
   pull_request:
     branches: [main]
@@ -11,16 +14,22 @@ on:
       - ".github/checkov/**"
 
 permissions:
+  # Permite ler o código e solicitar credenciais AWS pela role OIDC do repositório.
   contents: read
   id-token: write
 
 jobs:
   plan_hub:
     name: Plan hub
+    # Reutiliza o planejador comum para manter consistentes a inicialização do
+    # backend, a geração do plano e o gerenciamento do artefato.
     uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
     with:
+      # Cada stack mantém uma chave de state independente no S3.
       stack_dir: infra/hub
       state_key: hub/terraform.tfstate
+      # O hub não depende dos outputs de outro state Terraform.
       artifact_name: tfplan-hub-${{ github.sha }}
       uses_hub_state: false
+    # Encaminha ao workflow reutilizável os secrets disponíveis no repositório.
     secrets: inherit

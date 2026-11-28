@@ -1,5 +1,8 @@
 name: Terraform CD - hub to staging to production
 
+# Implanta mudanças de infraestrutura após chegarem à branch main. A sequência é
+# hub -> staging -> smoke test de staging -> production -> smoke test de production.
+# Execuções manuais devem usar main e seguem as mesmas dependências e aprovações.
 on:
   push:
     branches: [main]
@@ -11,9 +14,12 @@ on:
   workflow_dispatch:
 
 permissions:
+  # Permite ler o código e assumir as roles AWS configuradas por meio de OIDC.
   contents: read
   id-token: write
 
+# Não cancela uma implantação em andamento. O workflow reutilizável de apply também
+# serializa gravações para impedir alterações simultâneas no mesmo state.
 concurrency:
   group: terraform-infra-deploy-${{ github.ref }}
   cancel-in-progress: false
@@ -21,6 +27,7 @@ concurrency:
 jobs:
   plan_hub:
     name: Plan hub
+    # O state do hub é independente e usa secrets do repositório.
     uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
     with:
       stack_dir: infra/hub
@@ -32,6 +39,7 @@ jobs:
   apply_hub:
     name: Apply hub
     needs: plan_hub
+    # Aplica somente na branch main e quando o plano salvo contém mudanças.
     if: github.ref == 'refs/heads/main' && needs.plan_hub.outputs.has_changes == 'true'
     uses: ./.github/workflows/infra_reusable_terraform_apply.yaml
     with:
@@ -42,6 +50,8 @@ jobs:
 
   plan_staging:
     name: Plan staging
+    # Aguarda o plano do hub e seu apply, quando necessário, para que o plano da
+    # spoke leia os outputs mais recentes. Apply ignorado indica plano sem mudanças.
     needs: [plan_hub, apply_hub]
     if: >-
       always() &&
@@ -59,6 +69,7 @@ jobs:
   apply_staging:
     name: Apply staging
     needs: plan_staging
+    # Aplica o plano salvo de staging somente se ele contiver mudanças.
     if: github.ref == 'refs/heads/main' && needs.plan_staging.outputs.has_changes == 'true'
     uses: ./.github/workflows/infra_reusable_terraform_apply.yaml
     with:
@@ -70,6 +81,7 @@ jobs:
 
   smoke_test_staging:
     name: Smoke test staging
+    # Executa os testes de integração somente após um apply de staging bem-sucedido.
     needs: apply_staging
     if: needs.apply_staging.result == 'success'
     uses: ./.github/workflows/infra_test_cluster.yaml
@@ -79,6 +91,8 @@ jobs:
 
   plan_production:
     name: Plan production
+    # Se staging mudou, production depende do apply e do smoke test bem-sucedidos.
+    # Sem mudanças em staging, não há apply nem smoke test a aguardar.
     needs: [plan_staging, apply_staging, smoke_test_staging]
     if: >-
       always() &&
@@ -100,6 +114,7 @@ jobs:
   apply_production:
     name: Apply production
     needs: plan_production
+    # Aplica production somente após a aprovação da etapa de staging e se houver mudanças.
     if: github.ref == 'refs/heads/main' && needs.plan_production.outputs.has_changes == 'true'
     uses: ./.github/workflows/infra_reusable_terraform_apply.yaml
     with:
@@ -111,6 +126,7 @@ jobs:
 
   smoke_test_production:
     name: Smoke test production
+    # Valida production somente após um apply bem-sucedido.
     needs: apply_production
     if: github.ref == 'refs/heads/main' && needs.apply_production.result == 'success'
     uses: ./.github/workflows/infra_test_cluster.yaml

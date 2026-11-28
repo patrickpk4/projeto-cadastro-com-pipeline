@@ -1,5 +1,8 @@
 name: Terraform CI - production plan
 
+# Gera um plano de production, sem aplicar mudanças, nos pull requests relevantes.
+# O plano é separado do staging para revisar entradas e mudanças propostas
+# independentemente.
 on:
   pull_request:
     branches: [main]
@@ -13,17 +16,24 @@ on:
       - ".github/checkov/**"
 
 permissions:
+  # Permite ler o código e solicitar credenciais AWS via OIDC para consultar o state.
   contents: read
   id-token: write
 
 jobs:
   plan_production:
     name: Plan production
+    # O planejador reutilizável seleciona o Environment production e seus secrets.
     uses: ./.github/workflows/infra_reusable_terraform_plan.yaml
     with:
+      # Production usa o código compartilhado da spoke com state próprio.
       stack_dir: infra/spoke
       state_key: spoke/production/terraform.tfstate
+      # Resolve TF_VARS, AWS_ROLE e BUCKET no escopo do Environment production.
       environment: production
+      # Associa o artefato de plano ao commit exato do pull request.
       artifact_name: tfplan-production-${{ github.sha }}
+      # O plano da spoke depende dos outputs existentes no state aplicado do hub.
       uses_hub_state: true
+    # Encaminha os secrets do repositório e do Environment ao workflow reutilizável.
     secrets: inherit
