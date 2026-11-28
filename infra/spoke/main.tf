@@ -20,7 +20,7 @@ module "vpc" {
 
 module "eks" {
   count = 1
-  # This commit is the upstream v21.30.2 release.
+  # This commit is the upstream v21.30.2 release
   source             = "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git?ref=25c846a384bc66d16cc801d2f851431deb38de5d"
   name               = var.cluster_name
   kubernetes_version = var.kubernetes_version
